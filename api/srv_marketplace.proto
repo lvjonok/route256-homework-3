@@ -3,25 +3,56 @@ syntax = "proto3";
 package api_service_marketplace;
 option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_marketplace";
 
-message CreateProductRequest {};
+message CreateProductRequest {
+  string Name = 1;
+  string Desc = 2;
+};
 
-message CreateProductResponse {};
+message CreateProductResponse { uint64 ID = 1; };
 
-message GetProductRequest {};
+message GetProductRequest { uint64 ID = 1; };
 
-message GetProductResponse {};
+message GetProductResponse {
+  uint64 ID = 1;
+  string Name = 2;
+  string Desc = 3;
+};
 
-message AddReviewRequest {};
+message AddReviewRequest {
+  uint64 ProductID = 1;
+  string Text = 2;
+};
 
-message AddReviewResponse {};
+message AddReviewResponse { uint64 ID = 1; };
 
-message GetReviewsRequest {};
+message GetReviewsRequest { uint64 ProductID = 1; };
 
-message GetReviewsResponse {};
+message Review {
+  uint64 ID = 1;
+  uint64 ProductID = 2;
+  string Text = 3;
+};
 
-message UpdateCartRequest {};
+message GetReviewsResponse { repeated Review Reviews = 1; };
 
-message UpdateCartResponse {};
+message ProductUnit {
+  uint64 ProductID = 1;
+  uint64 Quantity = 2;
+}
+
+message UpdateCartRequest {
+  uint64 ID = 1;
+  repeated ProductUnit Products = 2;
+};
+
+message UpdateCartResponse { uint64 ID = 1; };
+
+message GetCartRequest { uint64 ID = 1; };
+
+message GetCartResponse {
+  uint64 ID = 1;
+  repeated ProductUnit Products = 2;
+};
 
 service Marketplace {
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
@@ -29,4 +60,5 @@ service Marketplace {
   rpc AddReview(AddReviewRequest) returns (AddReviewResponse);
   rpc GetReviews(GetReviewsRequest) returns (GetReviewsResponse);
   rpc UpdateCart(UpdateCartRequest) returns (UpdateCartResponse);
+  rpc GetCart(GetCartRequest) returns (GetCartResponse);
 };

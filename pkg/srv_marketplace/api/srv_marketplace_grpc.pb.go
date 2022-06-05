@@ -27,6 +27,7 @@ type MarketplaceClient interface {
 	AddReview(ctx context.Context, in *AddReviewRequest, opts ...grpc.CallOption) (*AddReviewResponse, error)
 	GetReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetReviewsResponse, error)
 	UpdateCart(ctx context.Context, in *UpdateCartRequest, opts ...grpc.CallOption) (*UpdateCartResponse, error)
+	GetCart(ctx context.Context, in *GetCartRequest, opts ...grpc.CallOption) (*GetCartResponse, error)
 }
 
 type marketplaceClient struct {
@@ -82,6 +83,15 @@ func (c *marketplaceClient) UpdateCart(ctx context.Context, in *UpdateCartReques
 	return out, nil
 }
 
+func (c *marketplaceClient) GetCart(ctx context.Context, in *GetCartRequest, opts ...grpc.CallOption) (*GetCartResponse, error) {
+	out := new(GetCartResponse)
+	err := c.cc.Invoke(ctx, "/api_service_marketplace.Marketplace/GetCart", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MarketplaceServer is the server API for Marketplace service.
 // All implementations must embed UnimplementedMarketplaceServer
 // for forward compatibility
@@ -91,6 +101,7 @@ type MarketplaceServer interface {
 	AddReview(context.Context, *AddReviewRequest) (*AddReviewResponse, error)
 	GetReviews(context.Context, *GetReviewsRequest) (*GetReviewsResponse, error)
 	UpdateCart(context.Context, *UpdateCartRequest) (*UpdateCartResponse, error)
+	GetCart(context.Context, *GetCartRequest) (*GetCartResponse, error)
 	mustEmbedUnimplementedMarketplaceServer()
 }
 
@@ -112,6 +123,9 @@ func (UnimplementedMarketplaceServer) GetReviews(context.Context, *GetReviewsReq
 }
 func (UnimplementedMarketplaceServer) UpdateCart(context.Context, *UpdateCartRequest) (*UpdateCartResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateCart not implemented")
+}
+func (UnimplementedMarketplaceServer) GetCart(context.Context, *GetCartRequest) (*GetCartResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCart not implemented")
 }
 func (UnimplementedMarketplaceServer) mustEmbedUnimplementedMarketplaceServer() {}
 
@@ -216,6 +230,24 @@ func _Marketplace_UpdateCart_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Marketplace_GetCart_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCartRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MarketplaceServer).GetCart(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api_service_marketplace.Marketplace/GetCart",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MarketplaceServer).GetCart(ctx, req.(*GetCartRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Marketplace_ServiceDesc is the grpc.ServiceDesc for Marketplace service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -242,6 +274,10 @@ var Marketplace_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateCart",
 			Handler:    _Marketplace_UpdateCart_Handler,
+		},
+		{
+			MethodName: "GetCart",
+			Handler:    _Marketplace_GetCart_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

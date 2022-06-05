@@ -16,10 +16,12 @@ type Review struct {
 	Text      string
 }
 
+type ProductUnit struct {
+	ID       types.ID // foreign key of Product
+	Quantity int
+}
+
 type Cart struct {
 	ID       types.ID // id of user
-	Products []struct {
-		ID       types.ID
-		Quantity int
-	}
+	Products []ProductUnit
 }
