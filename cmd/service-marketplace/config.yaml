@@ -1,0 +1,4 @@
+database:
+  url: some url for connection
+server:
+  url: localhost:8080
