@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package api_service_marketplace;
+option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_marketplace";
+
+message CreateProductRequest {};
+
+message CreateProductResponse {};
+
+message GetProductRequest {};
+
+message GetProductResponse {};
+
+message AddReviewRequest {};
+
+message AddReviewResponse {};
+
+message GetReviewsRequest {};
+
+message GetReviewsResponse {};
+
+message UpdateCartRequest {};
+
+message UpdateCartResponse {};
+
+service Marketplace {
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc AddReview(AddReviewRequest) returns (AddReviewResponse);
+  rpc GetReviews(GetReviewsRequest) returns (GetReviewsResponse);
+  rpc UpdateCart(UpdateCartRequest) returns (UpdateCartResponse);
+};

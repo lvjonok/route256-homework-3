@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package api_service_warehouse;
+option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_warehouse";
+
+message RegisterProductRequest {};
+
+message RegisterProductResponse {};
+
+message CheckProductRequest {};
+
+message CheckProductResponse {};
+
+message BookProductRequest {};
+
+message BookProductResponse {};
+
+service Warehouse {
+  rpc RegisterProduct(RegisterProductRequest) returns (RegisterProductResponse);
+  rpc CheckProduct(CheckProductRequest) returns (CheckProductResponse);
+  rpc BookProduct(BookProductRequest) returns (BookProductResponse);
+};

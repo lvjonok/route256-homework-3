@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+package api;
+option go_package = "gitlab.ozon.dev/lvjonok/homework-3/common";
+
+message Empty {};

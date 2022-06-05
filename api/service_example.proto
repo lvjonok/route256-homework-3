@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package api_service_example;
+option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_example";
+
+message PingRequest { string ping = 1; };
+
+message Pong { string pong = 1; };
+
+service PingPong { rpc Ping(PingRequest) returns (Pong); };

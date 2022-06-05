@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package api_service_orders;
+option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_orders";
+
+message CreateOrderRequest {};
+
+message CreateOrderResponse {};
+
+message CheckStatusRequest {};
+
+message CheckStatusResponse {};
+
+message UpdateStatusRequest {};
+
+message UpdateStatusResponse {};
+
+service Orders {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc CheckStatus(CheckStatusRequest) returns (CheckStatusResponse);
+  rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
+}
