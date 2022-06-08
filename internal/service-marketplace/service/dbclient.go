@@ -8,7 +8,7 @@ import (
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
 )
 
-var DBNotFound = errors.New("not found in database")
+var ErrDBNotFound = errors.New("not found in database")
 
 // DB defines interfaces we want our database client to implement
 type DB interface {

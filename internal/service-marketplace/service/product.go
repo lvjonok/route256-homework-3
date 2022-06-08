@@ -5,6 +5,7 @@ import (
 
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
+	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
 	pb "gitlab.ozon.dev/lvjonok/homework-3/pkg/srv_marketplace/api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,7 +28,9 @@ func (s *Service) CreateProduct(ctx context.Context, req *pb.CreateProductReques
 func (s *Service) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.GetProductResponse, error) {
 	product, err := s.DB.GetProduct(ctx, types.Int2ID(req.ID))
 	if err != nil {
-		// TODO: add condition for not found
+		if err == repo.ErrNotFound {
+			return nil, status.Errorf(codes.NotFound, "there is no product")
+		}
 		return nil, status.Errorf(codes.Internal, "failed to get product, err: <%v>", err)
 	}
 

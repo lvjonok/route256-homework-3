@@ -14,10 +14,6 @@ func (c *Client) UpdateCart(ctx context.Context, cart *models.Cart) (*types.ID, 
 	span, ctx := opentracing.StartSpanFromContext(ctx, "database update cart")
 	defer span.Finish()
 
-	// const query = `INSERT INTO cart(user_id, products)
-	// 	VALUES ($1, $2)
-	// 	RETURNING user_id;`
-
 	var b pgx.Batch
 	b.Queue(`UPDATE cart SET deleted=TRUE where user_id=$1`, cart.UserID)
 	for _, p := range cart.Products {
@@ -25,8 +21,11 @@ func (c *Client) UpdateCart(ctx context.Context, cart *models.Cart) (*types.ID, 
 	}
 
 	res := c.pool.SendBatch(ctx, &b)
-	if _, err := res.Query(); err != nil {
-		return nil, fmt.Errorf("failed to insert new cart, err: <%v>", err)
+
+	var err error
+	// var rows pgx.Rows
+	for err == nil {
+		_, err = res.Query()
 	}
 
 	return &cart.UserID, nil

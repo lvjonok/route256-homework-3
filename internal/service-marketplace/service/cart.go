@@ -5,6 +5,7 @@ import (
 
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
+	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
 	pb "gitlab.ozon.dev/lvjonok/homework-3/pkg/srv_marketplace/api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,6 +27,9 @@ func (s *Service) UpdateCart(ctx context.Context, req *pb.UpdateCartRequest) (*p
 
 	id, err := s.DB.UpdateCart(ctx, &newCart)
 	if err != nil {
+		if err == repo.ErrNotFound {
+			return nil, status.Errorf(codes.NotFound, "there is no cart")
+		}
 		return nil, status.Errorf(codes.Internal, "failed to update cart, err: <%v>", err)
 	}
 
@@ -35,7 +39,9 @@ func (s *Service) UpdateCart(ctx context.Context, req *pb.UpdateCartRequest) (*p
 func (s *Service) GetCart(ctx context.Context, req *pb.GetCartRequest) (*pb.GetCartResponse, error) {
 	cart, err := s.DB.GetCart(ctx, types.Int2ID(req.ID))
 	if err != nil {
-		// TODO: add check for not found
+		if err == repo.ErrNotFound {
+			return nil, status.Errorf(codes.NotFound, "there is no cart")
+		}
 		return nil, status.Errorf(codes.Internal, "failed to get cart, err: <%v>", err)
 	}
 

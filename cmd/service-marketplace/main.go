@@ -19,16 +19,22 @@ import (
 
 	"github.com/uber/jaeger-client-go"
 	"github.com/uber/jaeger-client-go/config"
+	cfg "gitlab.ozon.dev/lvjonok/homework-3/core/config"
 )
 
 func main() {
+	cfg, err := cfg.New("cmd/service-marketplace/config.yaml")
+	if err != nil {
+		panic(err)
+	}
+
 	log, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
 
 	jaegercfg := &config.Configuration{
-		ServiceName: "service",
+		ServiceName: cfg.Service.Name,
 		Sampler: &config.SamplerConfig{
 			Type:  "const",
 			Param: 1,
@@ -51,15 +57,15 @@ func main() {
 	// initialize metrics handler
 	metrics := metrics.New()
 	http.Handle("/metrics", promhttp.Handler())
-	go http.ListenAndServe("localhost:2112", nil)
+	go http.ListenAndServe(cfg.Metrics.URL, nil)
 
-	dbconn, err := dbconnector.New(context.Background(), "postgresql://root:root@localhost:5432/root")
+	dbconn, err := dbconnector.New(context.Background(), cfg.Database.URL)
 	if err != nil {
 		log.Sugar().Fatalf("err db connection: <%v>", err)
 	}
 	newServer := service.New(repo.New(dbconn), metrics, log)
 
-	lis, err := net.Listen("tcp", "localhost:8080")
+	lis, err := net.Listen("tcp", cfg.Server.URL)
 	if err != nil {
 		log.Sugar().Fatalf("failed to listen: %v", err)
 	}

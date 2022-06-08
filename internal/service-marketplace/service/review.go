@@ -5,6 +5,7 @@ import (
 
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
+	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
 	pb "gitlab.ozon.dev/lvjonok/homework-3/pkg/srv_marketplace/api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,7 +28,9 @@ func (s *Service) AddReview(ctx context.Context, req *pb.AddReviewRequest) (*pb.
 func (s *Service) GetReviews(ctx context.Context, req *pb.GetReviewsRequest) (*pb.GetReviewsResponse, error) {
 	res, err := s.DB.GetProductReviews(ctx, types.Int2ID(req.ProductID))
 	if err != nil {
-		// TODO: add check for not found
+		if err == repo.ErrNotFound {
+			return nil, status.Errorf(codes.NotFound, "there are no reviews")
+		}
 
 		return nil, status.Errorf(codes.Internal, "failed to get reviews for product, err: <%v>", err)
 	}

@@ -1,4 +1,8 @@
+service:
+  name: service-marketplace
 database:
-  url: some url for connection
+  url: postgresql://root:root@localhost:5432/root
 server:
   url: localhost:8080
+metrics:
+  url: localhost:2112
