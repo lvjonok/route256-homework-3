@@ -1,58 +1,48 @@
 version: "3"
 
 services:
-  db-marketplace:
-    networks:
-      - marketplace_network
-    # network_mode: "service:srv-marketplace"
-    image: postgres:latest
-    restart: always
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "root"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 5s
-    environment:
-      - POSTGRES_USER=root
-      - POSTGRES_PASSWORD=root
-      - POSTGRES_DB=root
-      - PGDATA=/var/lib/postgresql/data/pgdata
+  db:
+    extends:
+      file: base.yml
+      service: db
+    ports:
+      - 5432
     volumes:
-      - data:/var/lib/postgresql/data
-
-  migrations-marketplace:
-    # network_mode: "service:db-marketplace"
+      - marketplace-data:/var/lib/postgresql/data
     networks:
-      - marketplace_network
+      - marketplace-network
+
+  migrations:
+    extends:
+      file: base.yml
+      service: migrations
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile-migrations
       args:
         service: service-marketplace
+    networks:
+      - marketplace-network
     depends_on:
-      db-marketplace:
+      db:
         condition: service_healthy
 
-  srv-marketplace:
+  srv:
+    ports:
+      - 8080
+      - 2112
+    extends:
+      file: base.yml
+      service: srv
     networks:
-      - marketplace_network
-      - host_network
-    # network_mode: host
+      - marketplace-network
     build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile-service
       args:
         service: service-marketplace
-    # restart: always
     depends_on:
-      - migrations-marketplace
+      - migrations
 
 networks:
-  marketplace_network:
-  host_network:
-    external: true
+  marketplace-network:
 
 volumes:
-  data:
+  marketplace-data:
     driver: local

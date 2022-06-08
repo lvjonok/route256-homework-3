@@ -10,4 +10,11 @@ gen:
 	done \
 
 srv-marketplace:
-	go run cmd/service-marketplace/main.go
+	# docker-compose -f docker-compose-utils.yml -f docker-compose-marketplace.yml up
+	docker-compose -f docker-compose-marketplace.yml up --build
+
+srv-marketplace-down:
+	# docker-compose -f docker-compose-utils.yml -f docker-compose-marketplace.yml down
+	docker-compose -f docker-compose-marketplace.yml down
+	
+# go run cmd/service-marketplace/main.go

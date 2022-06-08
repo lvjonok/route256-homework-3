@@ -1,8 +1,8 @@
 service:
   name: service-marketplace
 database:
-  url: postgresql://root:root@db-marketplace:5432/root
+  url: postgresql://root:root@db:5432/root
 server:
-  url: localhost:8080
+  url: srv:8080
 metrics:
-  url: localhost:2112
+  url: srv:2112
