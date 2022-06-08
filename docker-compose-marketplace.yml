@@ -2,7 +2,9 @@ version: "3"
 
 services:
   db-marketplace:
-    network_mode: host
+    networks:
+      - marketplace_network
+    # network_mode: "service:srv-marketplace"
     image: postgres:latest
     restart: always
     healthcheck:
@@ -20,7 +22,9 @@ services:
       - data:/var/lib/postgresql/data
 
   migrations-marketplace:
-    network_mode: host
+    # network_mode: "service:db-marketplace"
+    networks:
+      - marketplace_network
     build:
       context: .
       dockerfile: dockerfiles/Dockerfile-migrations
@@ -31,15 +35,23 @@ services:
         condition: service_healthy
 
   srv-marketplace:
-    network_mode: host
+    networks:
+      - marketplace_network
+      - host_network
+    # network_mode: host
     build:
       context: .
       dockerfile: dockerfiles/Dockerfile-service
       args:
         service: service-marketplace
-    restart: always
+    # restart: always
     depends_on:
       - migrations-marketplace
+
+networks:
+  marketplace_network:
+  host_network:
+    external: true
 
 volumes:
   data:

@@ -63,6 +63,7 @@ func main() {
 	if err != nil {
 		log.Sugar().Fatalf("err db connection: <%v>", err)
 	}
+
 	newServer := service.New(repo.New(dbconn), metrics, log)
 
 	lis, err := net.Listen("tcp", cfg.Server.URL)
