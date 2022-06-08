@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/dbconnector"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/metrics"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/mw"
+	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/service"
 	pb "gitlab.ozon.dev/lvjonok/homework-3/pkg/srv_marketplace/api"
 	"go.uber.org/zap"
@@ -17,10 +20,6 @@ import (
 	"github.com/uber/jaeger-client-go"
 	"github.com/uber/jaeger-client-go/config"
 )
-
-// var counter = promauto.NewCounter(prometheus.CounterOpts{
-// 	Name: "orders_processed",
-// })
 
 func main() {
 	log, err := zap.NewDevelopment()
@@ -54,7 +53,11 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 	go http.ListenAndServe("localhost:2112", nil)
 
-	newServer := service.New(nil, metrics, log)
+	dbconn, err := dbconnector.New(context.Background(), "postgresql://root:root@localhost:5432/root")
+	if err != nil {
+		log.Sugar().Fatalf("err db connection: <%v>", err)
+	}
+	newServer := service.New(repo.New(dbconn), metrics, log)
 
 	lis, err := net.Listen("tcp", "localhost:8080")
 	if err != nil {

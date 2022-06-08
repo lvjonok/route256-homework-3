@@ -1,0 +1,57 @@
+version: "3"
+
+services:
+  prometheus:
+    network_mode: host
+    image: prom/prometheus
+    volumes:
+      - /home/leo/route256/homework-3/cmd/service-marketplace/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    # ports:
+    #   - "9090:9090"
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - 16686:16686
+      - 6831:6831/udp
+
+  db:
+    network_mode: host
+    image: postgres:latest
+    restart: always
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "root"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=root
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - data:/var/lib/postgresql/data
+
+  migrations:
+    network_mode: host
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile-migrations
+      args:
+        service: service-marketplace
+    depends_on:
+      db:
+        condition: service_healthy
+#   srv-marketplace:
+#     network_mode: host
+#     build:
+#       context: .
+#       dockerfile: dockerfiles/Dockerfile-service-marketplace
+#     restart: always
+#     depends_on:
+#       - migrations
+
+volumes:
+  data:
+    driver: local

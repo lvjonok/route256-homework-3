@@ -22,6 +22,6 @@ type ProductUnit struct {
 }
 
 type Cart struct {
-	ID       types.ID // id of user
+	UserID   types.ID // id of user
 	Products []ProductUnit
 }

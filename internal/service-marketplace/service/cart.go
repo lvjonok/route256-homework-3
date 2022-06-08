@@ -20,7 +20,7 @@ func (s *Service) UpdateCart(ctx context.Context, req *pb.UpdateCartRequest) (*p
 	}
 
 	newCart := models.Cart{
-		ID:       types.ID(req.ID),
+		UserID:   types.ID(req.ID),
 		Products: products,
 	}
 
@@ -47,5 +47,5 @@ func (s *Service) GetCart(ctx context.Context, req *pb.GetCartRequest) (*pb.GetC
 		})
 	}
 
-	return &pb.GetCartResponse{ID: uint64(cart.ID), Products: pbProducts}, nil
+	return &pb.GetCartResponse{ID: uint64(cart.UserID), Products: pbProducts}, nil
 }

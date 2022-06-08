@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package api_service_marketplace;
+
 option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_marketplace";
 
 message CreateProductRequest {

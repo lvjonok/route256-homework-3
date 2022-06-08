@@ -3,17 +3,26 @@ syntax = "proto3";
 package api_service_warehouse;
 option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_warehouse";
 
-message RegisterProductRequest {};
+message RegisterProductRequest {
+  uint64 ProductID = 1;
+  uint64 Quantity = 2;
+};
 
-message RegisterProductResponse {};
+message RegisterProductResponse { uint64 ProductID = 1; };
 
-message CheckProductRequest {};
+message CheckProductRequest { uint64 ProductID = 1; };
 
-message CheckProductResponse {};
+message CheckProductResponse {
+  uint64 ProductID = 1;
+  uint64 Quantity = 2;
+};
 
-message BookProductRequest {};
+message BookProductRequest {
+  uint64 ProductID = 1;
+  uint64 Quantity = 2;
+};
 
-message BookProductResponse {};
+message BookProductResponse { uint64 BookingID = 1; };
 
 service Warehouse {
   rpc RegisterProduct(RegisterProductRequest) returns (RegisterProductResponse);

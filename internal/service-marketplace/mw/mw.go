@@ -26,10 +26,14 @@ func MetricsInterceptor(ctx context.Context, req interface{}, info *grpc.UnarySe
 }
 
 func SpanInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	srv := info.Server.(*service.Service)
+
 	// obtain handler name to start spanning
 	handlerFunc := runtime.FuncForPC(reflect.ValueOf(handler).Pointer())
 
 	span, ctx := opentracing.StartSpanFromContext(ctx, handlerFunc.Name())
+	srv.Log.Debug("we created a new span for jaeger")
+
 	defer span.Finish()
 	return handler(ctx, req)
 }

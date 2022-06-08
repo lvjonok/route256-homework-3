@@ -3,17 +3,28 @@ syntax = "proto3";
 package api_service_orders;
 option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_orders";
 
-message CreateOrderRequest {};
+message ProductUnit {
+  uint64 ProductID = 1;
+  uint64 Quantity = 2;
+}
 
-message CreateOrderResponse {};
+message CreateOrderRequest {
+  uint64 UserID = 1;
+  repeated ProductUnit Products = 2;
+};
 
-message CheckStatusRequest {};
+message CreateOrderResponse { uint64 OrderID = 1; };
 
-message CheckStatusResponse {};
+message CheckStatusRequest { uint64 OrderID = 1; };
 
-message UpdateStatusRequest {};
+message CheckStatusResponse { string Status = 1; };
 
-message UpdateStatusResponse {};
+message UpdateStatusRequest {
+  uint64 OrderID = 1;
+  string Status = 2;
+};
+
+message UpdateStatusResponse { uint64 OrderID = 1; };
 
 service Orders {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
