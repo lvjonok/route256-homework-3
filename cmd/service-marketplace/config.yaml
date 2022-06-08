@@ -5,4 +5,5 @@ database:
 server:
   url: srv:8080
 metrics:
-  url: srv:2112
+  prometheus-url: srv:2112
+  jaeger-url: jaeger:6831

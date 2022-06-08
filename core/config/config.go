@@ -18,7 +18,8 @@ type Config struct {
 		URL string `yaml:"url"`
 	} `yaml:"server"`
 	Metrics struct {
-		URL string `yaml:"url"`
+		PrometheusURL string `yaml:"prometheus-url"`
+		JaegerURL     string `yaml:"jaeger-url"`
 	} `yaml:"metrics"`
 }
 

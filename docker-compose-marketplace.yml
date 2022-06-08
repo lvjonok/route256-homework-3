@@ -1,12 +1,28 @@
 version: "3"
 
 services:
+  prometheus:
+    extends:
+      file: base.yml
+      service: prometheus
+    ports:
+      - 2112
+    networks:
+      - marketplace-network
+
+  jaeger:
+    extends:
+      file: base.yml
+      service: jaeger
+    networks:
+      - marketplace-network
+
   db:
     extends:
       file: base.yml
       service: db
     ports:
-      - 5432
+      - 5432 # port of postgres
     volumes:
       - marketplace-data:/var/lib/postgresql/data
     networks:
@@ -27,8 +43,8 @@ services:
 
   srv:
     ports:
-      - 8080
-      - 2112
+      - 8080 # internal port of grpc service
+      - 2112:2112 # metrics port
     extends:
       file: base.yml
       service: srv

@@ -40,7 +40,8 @@ func main() {
 			Param: 1,
 		},
 		Reporter: &config.ReporterConfig{
-			LogSpans: true,
+			LogSpans:           true,
+			LocalAgentHostPort: cfg.Metrics.JaegerURL,
 		},
 	}
 
@@ -57,7 +58,7 @@ func main() {
 	// initialize metrics handler
 	metrics := metrics.New()
 	http.Handle("/metrics", promhttp.Handler())
-	go http.ListenAndServe(cfg.Metrics.URL, nil)
+	go http.ListenAndServe(cfg.Metrics.PrometheusURL, nil)
 
 	dbconn, err := dbconnector.New(context.Background(), cfg.Database.URL)
 	if err != nil {

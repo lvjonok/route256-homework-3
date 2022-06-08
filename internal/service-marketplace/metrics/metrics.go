@@ -20,6 +20,8 @@ type metrics struct {
 	GetReviewsErrors    prometheus.Counter
 	UpdateCart          prometheus.Counter
 	UpdateCartErrors    prometheus.Counter
+	GetCart             prometheus.Counter
+	GetCartErrors       prometheus.Counter
 }
 
 func (m *metrics) RequestsInc() {
@@ -59,6 +61,12 @@ func (m *metrics) UpdateCartInc() {
 func (m *metrics) UpdateCartErrorsInc() {
 	m.UpdateCartErrors.Inc()
 }
+func (m *metrics) GetCartInc() {
+	m.GetCart.Inc()
+}
+func (m *metrics) GetCartErrorsInc() {
+	m.GetCartErrors.Inc()
+}
 
 func New() *metrics {
 	r := &metrics{
@@ -97,6 +105,12 @@ func New() *metrics {
 		}),
 		UpdateCartErrors: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "update_cart_errors",
+		}),
+		GetCart: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "get_cart",
+		}),
+		GetCartErrors: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "get_cart_errors",
 		}),
 	}
 

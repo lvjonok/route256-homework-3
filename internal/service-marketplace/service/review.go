@@ -12,6 +12,8 @@ import (
 )
 
 func (s *Service) AddReview(ctx context.Context, req *pb.AddReviewRequest) (*pb.AddReviewResponse, error) {
+	s.Metrics.AddReviewInc()
+
 	newReview := models.Review{
 		ProductID: types.ID(req.ProductID),
 		Text:      req.Text,
@@ -19,6 +21,8 @@ func (s *Service) AddReview(ctx context.Context, req *pb.AddReviewRequest) (*pb.
 
 	id, err := s.DB.CreateReview(ctx, &newReview)
 	if err != nil {
+		s.Metrics.AddReviewErrorsInc()
+
 		return nil, status.Errorf(codes.Internal, "failed to add review, err: <%v>", err)
 	}
 
@@ -26,12 +30,15 @@ func (s *Service) AddReview(ctx context.Context, req *pb.AddReviewRequest) (*pb.
 }
 
 func (s *Service) GetReviews(ctx context.Context, req *pb.GetReviewsRequest) (*pb.GetReviewsResponse, error) {
+	s.Metrics.GetReviewsInc()
+
 	res, err := s.DB.GetProductReviews(ctx, types.Int2ID(req.ProductID))
 	if err != nil {
 		if err == repo.ErrNotFound {
 			return nil, status.Errorf(codes.NotFound, "there are no reviews")
 		}
 
+		s.Metrics.GetReviewsErrorsInc()
 		return nil, status.Errorf(codes.Internal, "failed to get reviews for product, err: <%v>", err)
 	}
 

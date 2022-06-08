@@ -12,6 +12,7 @@ import (
 )
 
 func (s *Service) CreateProduct(ctx context.Context, req *pb.CreateProductRequest) (*pb.CreateProductResponse, error) {
+	s.Metrics.CreateProductInc()
 	newProduct := models.Product{
 		Name: req.Name,
 		Desc: req.Desc,
@@ -19,6 +20,8 @@ func (s *Service) CreateProduct(ctx context.Context, req *pb.CreateProductReques
 
 	id, err := s.DB.CreateProduct(ctx, &newProduct)
 	if err != nil {
+		s.Metrics.CreateProductErrorsInc()
+
 		return nil, status.Errorf(codes.Internal, "failed to create new product, err: <%v>", err)
 	}
 
@@ -26,11 +29,15 @@ func (s *Service) CreateProduct(ctx context.Context, req *pb.CreateProductReques
 }
 
 func (s *Service) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.GetProductResponse, error) {
+	s.Metrics.GetProductInc()
+
 	product, err := s.DB.GetProduct(ctx, types.Int2ID(req.ID))
 	if err != nil {
 		if err == repo.ErrNotFound {
 			return nil, status.Errorf(codes.NotFound, "there is no product")
 		}
+
+		s.Metrics.GetProductErrorsInc()
 		return nil, status.Errorf(codes.Internal, "failed to get product, err: <%v>", err)
 	}
 

@@ -13,4 +13,6 @@ type Metrics interface {
 	GetReviewsErrorsInc()
 	UpdateCartInc()
 	UpdateCartErrorsInc()
+	GetCartInc()
+	GetCartErrorsInc()
 }

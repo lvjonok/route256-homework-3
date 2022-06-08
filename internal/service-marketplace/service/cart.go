@@ -12,6 +12,8 @@ import (
 )
 
 func (s *Service) UpdateCart(ctx context.Context, req *pb.UpdateCartRequest) (*pb.UpdateCartResponse, error) {
+	s.Metrics.UpdateCartInc()
+
 	products := []models.ProductUnit{}
 	for _, r := range req.Products {
 		products = append(products, models.ProductUnit{
@@ -30,6 +32,8 @@ func (s *Service) UpdateCart(ctx context.Context, req *pb.UpdateCartRequest) (*p
 		if err == repo.ErrNotFound {
 			return nil, status.Errorf(codes.NotFound, "there is no cart")
 		}
+
+		s.Metrics.UpdateCartErrorsInc()
 		return nil, status.Errorf(codes.Internal, "failed to update cart, err: <%v>", err)
 	}
 
@@ -37,11 +41,15 @@ func (s *Service) UpdateCart(ctx context.Context, req *pb.UpdateCartRequest) (*p
 }
 
 func (s *Service) GetCart(ctx context.Context, req *pb.GetCartRequest) (*pb.GetCartResponse, error) {
+	s.Metrics.GetCartInc()
+
 	cart, err := s.DB.GetCart(ctx, types.Int2ID(req.ID))
 	if err != nil {
 		if err == repo.ErrNotFound {
 			return nil, status.Errorf(codes.NotFound, "there is no cart")
 		}
+
+		s.Metrics.GetCartErrorsInc()
 		return nil, status.Errorf(codes.Internal, "failed to get cart, err: <%v>", err)
 	}
 
