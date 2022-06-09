@@ -9,7 +9,7 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:latest
     ports:
-      - 16686 # internal port of jaeger UI
+      - 16686:16686 # internal port of jaeger UI
       # - 6837
 
   db:

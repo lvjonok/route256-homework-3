@@ -68,46 +68,46 @@ func (m *metrics) GetCartErrorsInc() {
 func New() *metrics {
 	r := &metrics{
 		Requests: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "processed_requests",
+			Name: "Requests",
 		}),
 		RequestErrors: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "processed_requests_errors",
+			Name: "RequestErrors",
 		}),
 		CreateProduct: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "create_product",
+			Name: "CreateProduct",
 		}),
 		CreateProductErrors: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "create_product_errors",
+			Name: "CreateProductErrors",
 		}),
 		GetProduct: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "get_product",
+			Name: "GetProduct",
 		}),
 		GetProductErrors: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "get_product_errors",
+			Name: "GetProductErrors",
 		}),
 		AddReview: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "add_review",
+			Name: "AddReview",
 		}),
 		AddReviewErrors: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "add_review_errors",
+			Name: "AddReviewErrors",
 		}),
 		GetReviews: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "get_reviews",
+			Name: "GetReviews",
 		}),
 		GetReviewsErrors: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "get_reviews_errors",
+			Name: "GetReviewsErrors",
 		}),
 		UpdateCart: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "update_cart",
+			Name: "UpdateCart",
 		}),
 		UpdateCartErrors: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "update_cart_errors",
+			Name: "UpdateCartErrors",
 		}),
 		GetCart: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "get_cart",
+			Name: "GetCart",
 		}),
 		GetCartErrors: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "get_cart_errors",
+			Name: "GetCartErrors",
 		}),
 	}
 

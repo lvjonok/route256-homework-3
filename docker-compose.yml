@@ -1,0 +1,143 @@
+version: "3"
+
+services:
+  prometheus:
+    extends:
+      file: base.yml
+      service: prometheus
+    ports:
+      - 9090:9090
+    networks:
+      services-network:
+
+  jaeger:
+    extends:
+      file: base.yml
+      service: jaeger
+    networks:
+      services-network:
+
+  db-marketplace:
+    extends:
+      file: base.yml
+      service: db
+    ports:
+      - 5432 # port of postgres
+    volumes:
+      - marketplace-data:/var/lib/postgresql/data
+    networks:
+      services-network:
+
+  migrations-marketplace:
+    extends:
+      file: base.yml
+      service: migrations
+    build:
+      args:
+        service: service-marketplace
+    networks:
+      services-network:
+    depends_on:
+      db-marketplace:
+        condition: service_healthy
+
+  srv-marketplace:
+    ports:
+      - 8081:8080 # internal port of grpc service
+    extends:
+      file: base.yml
+      service: srv
+    networks:
+      services-network:
+    build:
+      args:
+        service: service-marketplace
+    depends_on:
+      - migrations-marketplace
+
+  db-orders:
+    extends:
+      file: base.yml
+      service: db
+    ports:
+      - 5432 # port of postgres
+    volumes:
+      - orders-data:/var/lib/postgresql/data
+    networks:
+      services-network:
+
+  migrations-orders:
+    extends:
+      file: base.yml
+      service: migrations
+    build:
+      args:
+        service: service-orders
+    networks:
+      services-network:
+    depends_on:
+      db-orders:
+        condition: service_healthy
+
+  srv-orders:
+    ports:
+      - 8082:8080 # internal port of grpc service
+    extends:
+      file: base.yml
+      service: srv
+    networks:
+      services-network:
+    build:
+      args:
+        service: service-orders
+    depends_on:
+      - migrations-orders
+
+  db-warehouse:
+    extends:
+      file: base.yml
+      service: db
+    ports:
+      - 5432 # port of postgres
+    volumes:
+      - warehouse-data:/var/lib/postgresql/data
+    networks:
+      services-network:
+
+  migrations-warehouse:
+    extends:
+      file: base.yml
+      service: migrations
+    build:
+      args:
+        service: service-warehouse
+    networks:
+      services-network:
+    depends_on:
+      db-warehouse:
+        condition: service_healthy
+
+  srv-warehouse:
+    ports:
+      - 8083:8080 # internal port of grpc service
+    extends:
+      file: base.yml
+      service: srv
+    networks:
+      services-network:
+    build:
+      args:
+        service: service-warehouse
+    depends_on:
+      - migrations-warehouse
+
+networks:
+  services-network:
+
+volumes:
+  marketplace-data:
+    driver: local
+  orders-data:
+    driver: local
+  warehouse-data:
+    driver: local

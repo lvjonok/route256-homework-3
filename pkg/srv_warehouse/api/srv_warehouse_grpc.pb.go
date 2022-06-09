@@ -8,6 +8,7 @@ package api
 
 import (
 	context "context"
+	api "gitlab.ozon.dev/lvjonok/homework-3/pkg/common/api"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -23,8 +24,9 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type WarehouseClient interface {
 	RegisterProduct(ctx context.Context, in *RegisterProductRequest, opts ...grpc.CallOption) (*RegisterProductResponse, error)
-	ChecksProduct(ctx context.Context, in *CheckProductsRequest, opts ...grpc.CallOption) (*CheckProductsResponse, error)
+	CheckProducts(ctx context.Context, in *CheckProductsRequest, opts ...grpc.CallOption) (*CheckProductsResponse, error)
 	BookProducts(ctx context.Context, in *BookProductsRequest, opts ...grpc.CallOption) (*BookProductsResponse, error)
+	UnbookProducts(ctx context.Context, in *UnbookProductsRequest, opts ...grpc.CallOption) (*api.Empty, error)
 }
 
 type warehouseClient struct {
@@ -44,9 +46,9 @@ func (c *warehouseClient) RegisterProduct(ctx context.Context, in *RegisterProdu
 	return out, nil
 }
 
-func (c *warehouseClient) ChecksProduct(ctx context.Context, in *CheckProductsRequest, opts ...grpc.CallOption) (*CheckProductsResponse, error) {
+func (c *warehouseClient) CheckProducts(ctx context.Context, in *CheckProductsRequest, opts ...grpc.CallOption) (*CheckProductsResponse, error) {
 	out := new(CheckProductsResponse)
-	err := c.cc.Invoke(ctx, "/api_service_warehouse.Warehouse/ChecksProduct", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api_service_warehouse.Warehouse/CheckProducts", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,13 +64,23 @@ func (c *warehouseClient) BookProducts(ctx context.Context, in *BookProductsRequ
 	return out, nil
 }
 
+func (c *warehouseClient) UnbookProducts(ctx context.Context, in *UnbookProductsRequest, opts ...grpc.CallOption) (*api.Empty, error) {
+	out := new(api.Empty)
+	err := c.cc.Invoke(ctx, "/api_service_warehouse.Warehouse/UnbookProducts", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WarehouseServer is the server API for Warehouse service.
 // All implementations must embed UnimplementedWarehouseServer
 // for forward compatibility
 type WarehouseServer interface {
 	RegisterProduct(context.Context, *RegisterProductRequest) (*RegisterProductResponse, error)
-	ChecksProduct(context.Context, *CheckProductsRequest) (*CheckProductsResponse, error)
+	CheckProducts(context.Context, *CheckProductsRequest) (*CheckProductsResponse, error)
 	BookProducts(context.Context, *BookProductsRequest) (*BookProductsResponse, error)
+	UnbookProducts(context.Context, *UnbookProductsRequest) (*api.Empty, error)
 	mustEmbedUnimplementedWarehouseServer()
 }
 
@@ -79,11 +91,14 @@ type UnimplementedWarehouseServer struct {
 func (UnimplementedWarehouseServer) RegisterProduct(context.Context, *RegisterProductRequest) (*RegisterProductResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterProduct not implemented")
 }
-func (UnimplementedWarehouseServer) ChecksProduct(context.Context, *CheckProductsRequest) (*CheckProductsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ChecksProduct not implemented")
+func (UnimplementedWarehouseServer) CheckProducts(context.Context, *CheckProductsRequest) (*CheckProductsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckProducts not implemented")
 }
 func (UnimplementedWarehouseServer) BookProducts(context.Context, *BookProductsRequest) (*BookProductsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BookProducts not implemented")
+}
+func (UnimplementedWarehouseServer) UnbookProducts(context.Context, *UnbookProductsRequest) (*api.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnbookProducts not implemented")
 }
 func (UnimplementedWarehouseServer) mustEmbedUnimplementedWarehouseServer() {}
 
@@ -116,20 +131,20 @@ func _Warehouse_RegisterProduct_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Warehouse_ChecksProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Warehouse_CheckProducts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CheckProductsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(WarehouseServer).ChecksProduct(ctx, in)
+		return srv.(WarehouseServer).CheckProducts(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api_service_warehouse.Warehouse/ChecksProduct",
+		FullMethod: "/api_service_warehouse.Warehouse/CheckProducts",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WarehouseServer).ChecksProduct(ctx, req.(*CheckProductsRequest))
+		return srv.(WarehouseServer).CheckProducts(ctx, req.(*CheckProductsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -152,6 +167,24 @@ func _Warehouse_BookProducts_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Warehouse_UnbookProducts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnbookProductsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WarehouseServer).UnbookProducts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api_service_warehouse.Warehouse/UnbookProducts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WarehouseServer).UnbookProducts(ctx, req.(*UnbookProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Warehouse_ServiceDesc is the grpc.ServiceDesc for Warehouse service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -164,12 +197,16 @@ var Warehouse_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Warehouse_RegisterProduct_Handler,
 		},
 		{
-			MethodName: "ChecksProduct",
-			Handler:    _Warehouse_ChecksProduct_Handler,
+			MethodName: "CheckProducts",
+			Handler:    _Warehouse_CheckProducts_Handler,
 		},
 		{
 			MethodName: "BookProducts",
 			Handler:    _Warehouse_BookProducts_Handler,
+		},
+		{
+			MethodName: "UnbookProducts",
+			Handler:    _Warehouse_UnbookProducts_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

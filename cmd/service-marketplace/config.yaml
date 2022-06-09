@@ -1,9 +1,9 @@
 service:
   name: service-marketplace
 database:
-  url: postgresql://root:root@db:5432/root
+  url: postgresql://root:root@db-marketplace:5432/root
 server:
-  url: srv:8080
+  url: srv-marketplace:8080
 metrics:
-  prometheus-url: srv:2112
+  prometheus-url: srv-marketplace:2112
   jaeger-url: jaeger:6831

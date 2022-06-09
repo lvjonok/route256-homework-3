@@ -17,10 +17,13 @@ message CheckProductsResponse { repeated common.ProductUnit Units = 1; };
 
 message BookProductsRequest { repeated common.ProductUnit Units = 1; };
 
-message BookProductsResponse { uint64 BookingID = 1; };
+message BookProductsResponse { repeated uint64 BookingIDs = 1; };
+
+message UnbookProductsRequest { repeated uint64 BookingIDs = 1; };
 
 service Warehouse {
   rpc RegisterProduct(RegisterProductRequest) returns (RegisterProductResponse);
-  rpc ChecksProduct(CheckProductsRequest) returns (CheckProductsResponse);
+  rpc CheckProducts(CheckProductsRequest) returns (CheckProductsResponse);
   rpc BookProducts(BookProductsRequest) returns (BookProductsResponse);
+  rpc UnbookProducts(UnbookProductsRequest) returns (common.Empty);
 };

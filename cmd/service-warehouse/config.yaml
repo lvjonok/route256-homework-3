@@ -1,0 +1,13 @@
+service:
+  name: service-warehouse
+database:
+  url: postgresql://root:root@db-warehouse:5432/root
+server:
+  url: srv-warehouse:8080
+metrics:
+  prometheus-url: srv-warehouse:2112
+  jaeger-url: jaeger:6831
+clients:
+  marketplace:
+    url: srv-marketplace:8080
+    timeout-ms: 100
