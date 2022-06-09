@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/dbconnector"
+	"gitlab.ozon.dev/lvjonok/homework-3/core/dbconnector"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
 )
 

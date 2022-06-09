@@ -6,6 +6,7 @@ import (
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
+	commonpb "gitlab.ozon.dev/lvjonok/homework-3/pkg/common/api"
 	pb "gitlab.ozon.dev/lvjonok/homework-3/pkg/srv_marketplace/api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,11 +15,11 @@ import (
 func (s *Service) UpdateCart(ctx context.Context, req *pb.UpdateCartRequest) (*pb.UpdateCartResponse, error) {
 	s.Metrics.UpdateCartInc()
 
-	products := []models.ProductUnit{}
+	products := []types.ProductUnit{}
 	for _, r := range req.Products {
-		products = append(products, models.ProductUnit{
-			ID:       types.ID(r.ProductID),
-			Quantity: int(r.Quantity),
+		products = append(products, types.ProductUnit{
+			ProductID: types.ID(r.ProductID),
+			Quantity:  int(r.Quantity),
 		})
 	}
 
@@ -53,10 +54,10 @@ func (s *Service) GetCart(ctx context.Context, req *pb.GetCartRequest) (*pb.GetC
 		return nil, status.Errorf(codes.Internal, "failed to get cart, err: <%v>", err)
 	}
 
-	pbProducts := []*pb.ProductUnit{}
+	pbProducts := []*commonpb.ProductUnit{}
 	for _, p := range cart.Products {
-		pbProducts = append(pbProducts, &pb.ProductUnit{
-			ProductID: uint64(p.ID),
+		pbProducts = append(pbProducts, &commonpb.ProductUnit{
+			ProductID: uint64(p.ProductID),
 			Quantity:  uint64(p.Quantity),
 		})
 	}

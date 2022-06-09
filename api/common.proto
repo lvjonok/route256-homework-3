@@ -1,6 +1,11 @@
 syntax = "proto3";
 
 package common;
-option go_package = "gitlab.ozon.dev/lvjonok/homework-3/common";
+option go_package = "gitlab.ozon.dev/lvjonok/homework-3/pkg/common/api";
 
 message Empty {};
+
+message ProductUnit {
+  uint64 ProductID = 1;
+  uint64 Quantity = 2;
+}

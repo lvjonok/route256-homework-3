@@ -17,7 +17,7 @@ func (c *Client) UpdateCart(ctx context.Context, cart *models.Cart) (*types.ID, 
 	var b pgx.Batch
 	b.Queue(`UPDATE cart SET deleted=TRUE where user_id=$1`, cart.UserID)
 	for _, p := range cart.Products {
-		b.Queue(`INSERT INTO cart(user_id, product_id, quantity) VALUES ($1, $2, $3)`, cart.UserID, p.ID, p.Quantity)
+		b.Queue(`INSERT INTO cart(user_id, product_id, quantity) VALUES ($1, $2, $3)`, cart.UserID, p.ProductID, p.Quantity)
 	}
 
 	res := c.pool.SendBatch(ctx, &b)
@@ -49,8 +49,8 @@ func (c *Client) GetCart(ctx context.Context, id *types.ID) (*models.Cart, error
 	}
 
 	for rows.Next() {
-		var p models.ProductUnit
-		if err := rows.Scan(&cart.UserID, &p.ID, &p.Quantity); err != nil {
+		var p types.ProductUnit
+		if err := rows.Scan(&cart.UserID, &p.ProductID, &p.Quantity); err != nil {
 			return nil, fmt.Errorf("failed to scan product unit, err: <%v>", err)
 		}
 

@@ -1,8 +1,9 @@
 syntax = "proto3";
 
+import "api/common.proto";
 package api_service_marketplace;
 
-option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_marketplace";
+option go_package = "gitlab.ozon.dev/lvjonok/homework-3/pkg/service_marketplace/api";
 
 message CreateProductRequest {
   string Name = 1;
@@ -36,14 +37,9 @@ message Review {
 
 message GetReviewsResponse { repeated Review Reviews = 1; };
 
-message ProductUnit {
-  uint64 ProductID = 1;
-  uint64 Quantity = 2;
-}
-
 message UpdateCartRequest {
   uint64 ID = 1;
-  repeated ProductUnit Products = 2;
+  repeated common.ProductUnit Products = 2;
 };
 
 message UpdateCartResponse { uint64 ID = 1; };
@@ -52,7 +48,7 @@ message GetCartRequest { uint64 ID = 1; };
 
 message GetCartResponse {
   uint64 ID = 1;
-  repeated ProductUnit Products = 2;
+  repeated common.ProductUnit Products = 2;
 };
 
 service Marketplace {

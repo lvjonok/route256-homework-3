@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
 )
 
@@ -29,14 +30,14 @@ func TestUpdateCart(t *testing.T) {
 
 	_, err = client.UpdateCart(ctx, &models.Cart{
 		UserID: 1234,
-		Products: []models.ProductUnit{
+		Products: []types.ProductUnit{
 			{
-				ID:       *p1id,
-				Quantity: 2,
+				ProductID: *p1id,
+				Quantity:  2,
 			},
 			{
-				ID:       *p2id,
-				Quantity: 4,
+				ProductID: *p2id,
+				Quantity:  4,
 			},
 		},
 	})
@@ -65,14 +66,14 @@ func TestGetCart(t *testing.T) {
 
 	cartID, err := client.UpdateCart(ctx, &models.Cart{
 		UserID: 1234,
-		Products: []models.ProductUnit{
+		Products: []types.ProductUnit{
 			{
-				ID:       *p1id,
-				Quantity: 2,
+				ProductID: *p1id,
+				Quantity:  2,
 			},
 			{
-				ID:       *p2id,
-				Quantity: 4,
+				ProductID: *p2id,
+				Quantity:  4,
 			},
 		},
 	})
@@ -80,14 +81,14 @@ func TestGetCart(t *testing.T) {
 
 	res, err := client.GetCart(ctx, cartID)
 	require.NoError(t, err)
-	require.ElementsMatch(t, res.Products, []models.ProductUnit{
+	require.ElementsMatch(t, res.Products, []types.ProductUnit{
 		{
-			ID:       *p1id,
-			Quantity: 2,
+			ProductID: *p1id,
+			Quantity:  2,
 		},
 		{
-			ID:       *p2id,
-			Quantity: 4,
+			ProductID: *p2id,
+			Quantity:  4,
 		},
 	})
 }

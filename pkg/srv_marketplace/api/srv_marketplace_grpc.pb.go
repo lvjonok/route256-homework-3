@@ -4,7 +4,7 @@
 // - protoc             v3.6.1
 // source: api/srv_marketplace.proto
 
-package service_marketplace
+package api
 
 import (
 	context "context"

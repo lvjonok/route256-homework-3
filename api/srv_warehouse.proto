@@ -1,7 +1,8 @@
 syntax = "proto3";
 
 package api_service_warehouse;
-option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_warehouse";
+option go_package = "gitlab.ozon.dev/lvjonok/homework-3/pkg/service_warehouse/api";
+import "api/common.proto";
 
 message RegisterProductRequest {
   uint64 ProductID = 1;
@@ -10,22 +11,16 @@ message RegisterProductRequest {
 
 message RegisterProductResponse { uint64 ProductID = 1; };
 
-message CheckProductRequest { uint64 ProductID = 1; };
+message CheckProductsRequest { repeated uint64 ProductIDs = 1; };
 
-message CheckProductResponse {
-  uint64 ProductID = 1;
-  uint64 Quantity = 2;
-};
+message CheckProductsResponse { repeated common.ProductUnit Units = 1; };
 
-message BookProductRequest {
-  uint64 ProductID = 1;
-  uint64 Quantity = 2;
-};
+message BookProductsRequest { repeated common.ProductUnit Units = 1; };
 
-message BookProductResponse { uint64 BookingID = 1; };
+message BookProductsResponse { uint64 BookingID = 1; };
 
 service Warehouse {
   rpc RegisterProduct(RegisterProductRequest) returns (RegisterProductResponse);
-  rpc CheckProduct(CheckProductRequest) returns (CheckProductResponse);
-  rpc BookProduct(BookProductRequest) returns (BookProductResponse);
+  rpc ChecksProduct(CheckProductsRequest) returns (CheckProductsResponse);
+  rpc BookProducts(BookProductsRequest) returns (BookProductsResponse);
 };

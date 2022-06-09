@@ -9,6 +9,7 @@ import (
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/service"
+	commonpb "gitlab.ozon.dev/lvjonok/homework-3/pkg/common/api"
 	service_marketplace "gitlab.ozon.dev/lvjonok/homework-3/pkg/srv_marketplace/api"
 )
 
@@ -24,7 +25,7 @@ func TestUpdateCart(t *testing.T) {
 
 	resp, err := srv.UpdateCart(ctx, &service_marketplace.UpdateCartRequest{
 		ID:       1234,
-		Products: []*service_marketplace.ProductUnit{},
+		Products: []*commonpb.ProductUnit{},
 	})
 	require.NoError(t, err)
 	require.Equal(t, uint64(1234), resp.ID)
@@ -36,14 +37,14 @@ func TestGetCart(t *testing.T) {
 
 	cart := models.Cart{
 		UserID: 1234,
-		Products: []models.ProductUnit{
+		Products: []types.ProductUnit{
 			{
-				ID:       1,
-				Quantity: 2,
+				ProductID: 1,
+				Quantity:  2,
 			},
 			{
-				ID:       2,
-				Quantity: 3,
+				ProductID: 2,
+				Quantity:  3,
 			},
 		},
 	}

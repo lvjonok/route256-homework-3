@@ -1,8 +1,6 @@
 package metrics
 
 import (
-	"log"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -25,7 +23,6 @@ type metrics struct {
 }
 
 func (m *metrics) RequestsInc() {
-	log.Printf("requests inc")
 	m.Requests.Inc()
 }
 func (m *metrics) RequestErrorsInc() {
