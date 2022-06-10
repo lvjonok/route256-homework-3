@@ -1,0 +1,96 @@
+version: "3"
+
+services:
+  db-marketplace:
+    extends:
+      file: base.yml
+      service: db
+    ports:
+      - 5432 # port of postgres
+    volumes:
+      - marketplace-data-test:/var/lib/postgresql/data
+    networks:
+      services-network:
+
+  migrations-marketplace:
+    extends:
+      file: base.yml
+      service: migrations
+    build:
+      args:
+        service: service-marketplace
+    networks:
+      services-network:
+    depends_on:
+      db-marketplace:
+        condition: service_healthy
+
+  db-orders:
+    extends:
+      file: base.yml
+      service: db
+    ports:
+      - 5432 # port of postgres
+    volumes:
+      - orders-data-test:/var/lib/postgresql/data
+    networks:
+      services-network:
+
+  migrations-orders:
+    extends:
+      file: base.yml
+      service: migrations
+    build:
+      args:
+        service: service-orders
+    networks:
+      services-network:
+    depends_on:
+      db-orders:
+        condition: service_healthy
+
+  db-warehouse:
+    extends:
+      file: base.yml
+      service: db
+    ports:
+      - 5432 # port of postgres
+    volumes:
+      - warehouse-data-test:/var/lib/postgresql/data
+    networks:
+      services-network:
+
+  migrations-warehouse:
+    extends:
+      file: base.yml
+      service: migrations
+    build:
+      args:
+        service: service-warehouse
+    networks:
+      services-network:
+    depends_on:
+      db-warehouse:
+        condition: service_healthy
+
+  test:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile-test
+    networks:
+      services-network:
+    depends_on:
+      - migrations-warehouse
+      - migrations-orders
+      - migrations-marketplace
+
+networks:
+  services-network:
+
+volumes:
+  marketplace-data-test:
+    driver: local
+  orders-data-test:
+    driver: local
+  warehouse-data-test:
+    driver: local

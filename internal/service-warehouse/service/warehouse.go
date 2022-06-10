@@ -17,7 +17,6 @@ func (s *Service) RegisterProduct(ctx context.Context, req *api.RegisterProductR
 	s.Metrics.RegisterProductInc()
 
 	// check that product is registered in marketplace
-	s.Log.Debug("calling get product from marketplace client")
 	if _, err := s.mpClient.GetProduct(ctx, &marketplace_api.GetProductRequest{
 		ID: req.ProductID,
 	}); err != nil {
@@ -102,7 +101,7 @@ func (s *Service) UnbookProducts(ctx context.Context, req *api.UnbookProductsReq
 	}
 
 	if err := s.DB.UnbookProducts(ctx, ids); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to unbook products, err: <%v>")
+		return nil, status.Errorf(codes.Internal, "failed to unbook products, err: <%v>", err)
 	}
 
 	return &common.Empty{}, nil
