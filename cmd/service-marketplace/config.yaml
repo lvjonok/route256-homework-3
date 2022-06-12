@@ -2,6 +2,9 @@ service:
   name: service-marketplace
 database:
   url: postgresql://root:root@db-marketplace:5432/root
+cache:
+  urls:
+    - cache-marketplace:11211
 server:
   url: srv-marketplace:8080
 metrics:

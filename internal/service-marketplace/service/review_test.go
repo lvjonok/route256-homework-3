@@ -6,6 +6,7 @@ import (
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
+	"gitlab.ozon.dev/lvjonok/homework-3/core/cacheconnector"
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/service"
@@ -25,8 +26,10 @@ func TestAddReview(t *testing.T) {
 
 	mockMetrics := service.NewMetricsMock(mc)
 	mockMetrics.AddReviewIncMock.Return()
+	mockCache := service.NewCacheMock(mc)
+	mockCache.AppendReviewMock.Return(nil)
 
-	srv := service.New(mockDB, mockMetrics, logger)
+	srv := service.New(mockDB, mockCache, mockMetrics, logger)
 	ctx := context.Background()
 
 	resp, err := srv.AddReview(ctx, &service_marketplace.AddReviewRequest{
@@ -52,8 +55,11 @@ func TestGetReviews(t *testing.T) {
 
 	mockMetrics := service.NewMetricsMock(mc)
 	mockMetrics.GetReviewsIncMock.Return()
+	mockCache := service.NewCacheMock(mc)
+	mockCache.GetReviewsMock.Return(nil, cacheconnector.ErrCacheMiss)
+	mockCache.UpsertReviewsMock.Return(nil)
 
-	srv := service.New(mockDB, mockMetrics, logger)
+	srv := service.New(mockDB, mockCache, mockMetrics, logger)
 	ctx := context.Background()
 
 	resp, err := srv.GetReviews(ctx, &service_marketplace.GetReviewsRequest{

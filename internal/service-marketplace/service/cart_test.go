@@ -6,6 +6,7 @@ import (
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
+	"gitlab.ozon.dev/lvjonok/homework-3/core/cacheconnector"
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/service"
@@ -25,8 +26,9 @@ func TestUpdateCart(t *testing.T) {
 
 	mockDB := service.NewDBMock(mc)
 	mockDB.UpdateCartMock.Return(types.Int2ID(1234), nil)
+	mockCache := service.NewCacheMock(mc)
 
-	srv := service.New(mockDB, mockMetrics, logger)
+	srv := service.New(mockDB, mockCache, mockMetrics, logger)
 	ctx := context.Background()
 
 	resp, err := srv.UpdateCart(ctx, &service_marketplace.UpdateCartRequest{
@@ -61,8 +63,11 @@ func TestGetCart(t *testing.T) {
 	mockMetrics.GetCartIncMock.Return()
 	mockDB := service.NewDBMock(mc)
 	mockDB.GetCartMock.Return(&cart, nil)
+	mockCache := service.NewCacheMock(mc)
+	mockCache.GetCartMock.Return(nil, cacheconnector.ErrCacheMiss)
+	mockCache.UpsertCartMock.Return(nil)
 
-	srv := service.New(mockDB, mockMetrics, logger)
+	srv := service.New(mockDB, mockCache, mockMetrics, logger)
 	ctx := context.Background()
 
 	resp, err := srv.GetCart(ctx, &service_marketplace.GetCartRequest{

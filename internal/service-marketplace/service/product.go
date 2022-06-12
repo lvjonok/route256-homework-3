@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"gitlab.ozon.dev/lvjonok/homework-3/core/cacheconnector"
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
@@ -31,14 +32,27 @@ func (s *Service) CreateProduct(ctx context.Context, req *pb.CreateProductReques
 func (s *Service) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.GetProductResponse, error) {
 	s.Metrics.GetProductInc()
 
-	product, err := s.DB.GetProduct(ctx, types.Int2ID(req.ID))
-	if err != nil {
-		if err == repo.ErrNotFound {
-			return nil, status.Errorf(codes.NotFound, "there is no product")
+	var (
+		product *models.Product
+		err     error
+	)
+
+	if product, err = s.Cache.GetProduct(ctx, *types.Int2ID(req.GetID())); err == cacheconnector.ErrCacheMiss {
+		product, err = s.DB.GetProduct(ctx, types.Int2ID(req.ID))
+		if err != nil {
+			if err == repo.ErrNotFound {
+				return nil, status.Errorf(codes.NotFound, "there is no product")
+			}
+
+			s.Metrics.GetProductErrorsInc()
+			return nil, status.Errorf(codes.Internal, "failed to get product, err: <%v>", err)
 		}
 
-		s.Metrics.GetProductErrorsInc()
-		return nil, status.Errorf(codes.Internal, "failed to get product, err: <%v>", err)
+		if err := s.Cache.UpsertProduct(ctx, *product); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to upsert product in cache, err: <%v>", err)
+		}
+	} else if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to check product in cache, err: <%v>", err)
 	}
 
 	return &pb.GetProductResponse{

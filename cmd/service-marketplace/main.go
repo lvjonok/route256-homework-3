@@ -9,6 +9,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gitlab.ozon.dev/lvjonok/homework-3/core/dbconnector"
+	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/cache"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/metrics"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/mw"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
@@ -65,7 +66,12 @@ func main() {
 		log.Sugar().Fatalf("err db connection: <%v>", err)
 	}
 
-	newServer := service.New(repo.New(dbconn), metrics, log)
+	cacheconn, err := cache.New(cfg.Cache.Urls)
+	if err != nil {
+		log.Sugar().Fatalf("err memcached connection: <%v>", err)
+	}
+
+	newServer := service.New(repo.New(dbconn), cacheconn, metrics, log)
 
 	lis, err := net.Listen("tcp", cfg.Server.URL)
 	if err != nil {

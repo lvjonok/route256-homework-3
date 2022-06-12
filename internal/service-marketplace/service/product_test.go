@@ -6,6 +6,7 @@ import (
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
+	"gitlab.ozon.dev/lvjonok/homework-3/core/cacheconnector"
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
@@ -28,8 +29,9 @@ func TestCreateProduct(t *testing.T) {
 
 	mockMetrics := service.NewMetricsMock(mc)
 	mockMetrics.CreateProductIncMock.Return()
+	mockCache := service.NewCacheMock(mc)
 
-	srv := service.New(mockDB, mockMetrics, logger)
+	srv := service.New(mockDB, mockCache, mockMetrics, logger)
 	ctx := context.Background()
 
 	resp, err := srv.CreateProduct(ctx, &service_marketplace.CreateProductRequest{
@@ -56,8 +58,11 @@ func TestGetProduct(t *testing.T) {
 
 	mockMetrics := service.NewMetricsMock(mc)
 	mockMetrics.GetProductIncMock.Return()
+	mockCache := service.NewCacheMock(mc)
+	mockCache.GetProductMock.Return(nil, cacheconnector.ErrCacheMiss)
+	mockCache.UpsertProductMock.Return(nil)
 
-	srv := service.New(mockDB, mockMetrics, logger)
+	srv := service.New(mockDB, mockCache, mockMetrics, logger)
 	ctx := context.Background()
 
 	resp, err := srv.GetProduct(ctx, &service_marketplace.GetProductRequest{
@@ -81,8 +86,10 @@ func TestGetProductNotFound(t *testing.T) {
 
 	mockMetrics := service.NewMetricsMock(mc)
 	mockMetrics.GetProductIncMock.Return()
+	mockCache := service.NewCacheMock(mc)
+	mockCache.GetProductMock.Return(nil, cacheconnector.ErrCacheMiss)
 
-	srv := service.New(mockDB, mockMetrics, logger)
+	srv := service.New(mockDB, mockCache, mockMetrics, logger)
 	ctx := context.Background()
 
 	_, err = srv.GetProduct(ctx, &service_marketplace.GetProductRequest{

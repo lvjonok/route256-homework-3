@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"errors"
 
+	"gitlab.ozon.dev/lvjonok/homework-3/core/cacheconnector"
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-marketplace/repo"
@@ -44,14 +46,27 @@ func (s *Service) UpdateCart(ctx context.Context, req *pb.UpdateCartRequest) (*p
 func (s *Service) GetCart(ctx context.Context, req *pb.GetCartRequest) (*pb.GetCartResponse, error) {
 	s.Metrics.GetCartInc()
 
-	cart, err := s.DB.GetCart(ctx, types.Int2ID(req.ID))
-	if err != nil {
-		if err == repo.ErrNotFound {
-			return nil, status.Errorf(codes.NotFound, "there is no cart")
+	var (
+		cart *models.Cart
+		err  error
+	)
+
+	if cart, err = s.Cache.GetCart(ctx, *types.Int2ID(req.ID)); errors.Is(err, cacheconnector.ErrCacheMiss) {
+		cart, err = s.DB.GetCart(ctx, types.Int2ID(req.ID))
+		if err != nil {
+			if err == repo.ErrNotFound {
+				return nil, status.Errorf(codes.NotFound, "there is no cart")
+			}
+
+			s.Metrics.GetCartErrorsInc()
+			return nil, status.Errorf(codes.Internal, "failed to get cart, err: <%v>", err)
 		}
 
-		s.Metrics.GetCartErrorsInc()
-		return nil, status.Errorf(codes.Internal, "failed to get cart, err: <%v>", err)
+		if err := s.Cache.UpsertCart(ctx, *cart); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to update cart in cache, err: <%v>", err)
+		}
+	} else if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to query cache, err: <%v>", err)
 	}
 
 	pbProducts := []*commonpb.ProductUnit{}
