@@ -12,8 +12,20 @@ gen:
 run:
 	docker-compose up
 
+s-warehouse:
+	docker-compose up --force-recreate --no-deps --build -d srv-warehouse
+
+s-marketplace:
+	docker-compose up --force-recreate --no-deps --build -d srv-marketplace
+
+s-orders:
+	docker-compose up --force-recreate --no-deps --build -d srv-orders
+
+run-all:
+	docker-compose up
+
 rebuild:
-	docker-compose up --build --remove-orphans
+	docker-compose up --build
 
 stop:
 	docker-compose down

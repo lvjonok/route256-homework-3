@@ -2,6 +2,9 @@ service:
   name: service-warehouse
 database:
   url: postgresql://root:root@db-warehouse:5432/root
+cache:
+  urls:
+    - cache-warehouse:11211
 server:
   url: srv-warehouse:8080
 metrics:

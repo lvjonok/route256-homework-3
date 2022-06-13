@@ -14,6 +14,9 @@ type Config struct {
 	Database struct {
 		URL string `yaml:"url"`
 	} `yaml:"database"`
+	Cache struct {
+		Urls []string `yaml:"urls"`
+	} `yaml:"cache"`
 	Server struct {
 		URL string `yaml:"url"`
 	} `yaml:"server"`

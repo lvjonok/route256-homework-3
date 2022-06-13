@@ -41,6 +41,11 @@ services:
       db-marketplace:
         condition: service_healthy
 
+  cache-marketplace:
+    networks:
+      services-network:
+    image: memcached:latest
+
   srv-marketplace:
     ports:
       - 8081:8080 # internal port of grpc service
@@ -116,6 +121,11 @@ services:
     depends_on:
       db-warehouse:
         condition: service_healthy
+
+  cache-warehouse:
+    networks:
+      services-network:
+    image: memcached:latest
 
   srv-warehouse:
     ports:

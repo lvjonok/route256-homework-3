@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"gitlab.ozon.dev/lvjonok/homework-3/core/cacheconnector"
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-warehouse/models"
 	common "gitlab.ozon.dev/lvjonok/homework-3/pkg/common/api"
@@ -28,6 +29,11 @@ func (s *Service) RegisterProduct(ctx context.Context, req *api.RegisterProductR
 		return nil, status.Errorf(codes.Internal, "failed to check that product exists, err: <%v>", err)
 	}
 
+	// as we updated product, we should delete it from cache, to fetch next time
+	if err := s.Cache.DeleteProducts(ctx, []types.ID{types.ID(req.ProductID)}); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete product from cache, err: <%v>", err)
+	}
+
 	// adding new entry
 	if err := s.DB.RegisterProduct(ctx, &models.Entry{
 		ProductID: types.ID(req.ProductID),
@@ -48,9 +54,45 @@ func (s *Service) CheckProducts(ctx context.Context, req *api.CheckProductsReque
 	for _, i := range req.ProductIDs {
 		ids = append(ids, *types.Int2ID(i))
 	}
-	units, err := s.DB.CheckProducts(ctx, ids)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to query check products, err: <%v>", err)
+
+	var (
+		units []types.ProductUnit
+		err   error
+	)
+
+	// check in cache
+	units, err = s.Cache.GetProducts(ctx, ids)
+	if err == cacheconnector.ErrCacheMiss || len(units) != len(ids) {
+		// we need to find indices which were in request, but did not appear in units
+
+		// create hash table of ids we already found
+		reqIds := map[types.ID]bool{}
+		for _, i := range units {
+			reqIds[i.ProductID] = true
+		}
+
+		missingIds := []types.ID{}
+		// iterate through requests ids to find missing
+		for _, i := range ids {
+			// check if we did not find
+			if _, ok := reqIds[i]; !ok {
+				missingIds = append(missingIds, i)
+			}
+		}
+
+		dbunits, err := s.DB.CheckProducts(ctx, missingIds)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to query check products, err: <%v>", err)
+		}
+
+		// update cache
+		if err := s.Cache.UpsertProducts(ctx, dbunits); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to update product units in cache, err: <%v>", err)
+		}
+
+		units = append(units, dbunits...)
+	} else if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get products from cache: <%v>", err)
 	}
 
 	pUnits := []*common.ProductUnit{}
@@ -70,12 +112,18 @@ func (s *Service) CheckProducts(ctx context.Context, req *api.CheckProductsReque
 func (s *Service) BookProducts(ctx context.Context, req *api.BookProductsRequest) (*api.BookProductsResponse, error) {
 	s.Metrics.BookProductsInc()
 
+	updatedIds := []types.ID{}
 	units := []types.ProductUnit{}
 	for _, u := range req.Units {
+		updatedIds = append(updatedIds, *types.Int2ID(u.ProductID))
 		units = append(units, types.ProductUnit{
 			ProductID: types.ID(u.ProductID),
 			Quantity:  int(u.Quantity),
 		})
+	}
+
+	if err := s.Cache.DeleteProducts(ctx, updatedIds); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete products from cache, err: <%v>", err)
 	}
 
 	bookingIDs, err := s.DB.BookProducts(ctx, units)
@@ -98,6 +146,11 @@ func (s *Service) UnbookProducts(ctx context.Context, req *api.UnbookProductsReq
 	ids := []types.ID{}
 	for _, id := range req.BookingIDs {
 		ids = append(ids, types.ID(id))
+	}
+
+	// we should remove products from cache, to fetch them later
+	if err := s.Cache.DeleteProducts(ctx, ids); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete products from cache, err: <%v>", err)
 	}
 
 	if err := s.DB.UnbookProducts(ctx, ids); err != nil {
