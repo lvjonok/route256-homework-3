@@ -28,6 +28,30 @@ services:
     networks:
       services-network:
 
+  db-marketplace-even:
+    extends:
+      file: base.yml
+      service: db
+    ports:
+      - 5432 # port of postgres
+    volumes:
+      - marketplace-data-even:/var/lib/postgresql/data
+    networks:
+      services-network:
+
+  migrations-marketplace-even:
+    extends:
+      file: base.yml
+      service: migrations-shard
+    build:
+      args:
+        migrations: internal/service-marketplace/shards/even_reviews
+    depends_on:
+      db-marketplace-even:
+        condition: service_healthy
+    networks:
+      services-network:
+
   migrations-marketplace:
     extends:
       file: base.yml
@@ -146,6 +170,8 @@ networks:
 
 volumes:
   marketplace-data:
+    driver: local
+  marketplace-data-even:
     driver: local
   orders-data:
     driver: local

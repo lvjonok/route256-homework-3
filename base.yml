@@ -34,6 +34,11 @@ services:
       context: .
       dockerfile: dockerfiles/Dockerfile-migrations
 
+  migrations-shard:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile-shard
+
   srv:
     build:
       context: .
