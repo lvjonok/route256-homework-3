@@ -17,8 +17,7 @@ func MetricsInterceptor(ctx context.Context, req interface{}, info *grpc.UnarySe
 	resp, err := handler(ctx, req)
 	if err != nil {
 		srv.Metrics.RequestErrorsInc()
-		// TODO: change to error method
-		srv.Log.Sugar().Debug(info.FullMethod, req, err)
+		srv.Log.Sugar().Error(info.FullMethod, req, err)
 	} else {
 		srv.Log.Sugar().Debug(info.FullMethod, req)
 	}

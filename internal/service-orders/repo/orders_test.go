@@ -83,3 +83,29 @@ func TestUpdateStatus(t *testing.T) {
 
 	require.Equal(t, "cool", status)
 }
+
+func TestGetOrder(t *testing.T) {
+	client, ctx := Prepare(t)
+
+	units := []types.ProductUnit{
+		{
+			ProductID: 1,
+			Quantity:  1,
+		},
+		{
+			ProductID: 2,
+			Quantity:  2,
+		},
+	}
+
+	id, err := client.CreateOrder(ctx, &models.Order{
+		UserID:   1234,
+		Products: units,
+	})
+	require.NoError(t, err)
+
+	res, err := client.GetOrder(ctx, id)
+	require.NoError(t, err)
+
+	require.ElementsMatch(t, units, res.Products)
+}

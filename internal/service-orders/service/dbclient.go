@@ -15,4 +15,8 @@ type DB interface {
 	CreateOrder(context.Context, *models.Order) (*types.ID, error)
 	CheckStatus(context.Context, *types.ID) (string, error)
 	UpdateStatus(context.Context, *models.Order) error
+	GetOrder(context.Context, *types.ID) (*models.Order, error)
+	UpdateOrderSagaStatus(ctx context.Context, order *models.Order) error
+	GetProcessingOrders(ctx context.Context, retries int) ([]types.ID, error)
+	AddRetry(ctx context.Context, order_id types.ID, saga models.OrderStatus) error
 }

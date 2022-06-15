@@ -7,6 +7,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type SagaConfig struct {
+	Retries   int `yaml:"retries"`
+	TimeoutMs int `yaml:"timeout-ms"`
+}
+
 type Config struct {
 	Service struct {
 		Name string `yaml:"name"`
@@ -31,6 +36,7 @@ type Config struct {
 			Timeout int64  `yaml:"timeout-ms"`
 		}
 	} `yaml:"clients"`
+	Saga SagaConfig `yaml:"saga"`
 }
 
 func New(filename string) (*Config, error) {

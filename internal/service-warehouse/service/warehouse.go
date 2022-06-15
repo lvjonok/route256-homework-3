@@ -95,12 +95,25 @@ func (s *Service) CheckProducts(ctx context.Context, req *api.CheckProductsReque
 		return nil, status.Errorf(codes.Internal, "failed to get products from cache: <%v>", err)
 	}
 
+	foundIds := map[uint64]bool{}
+
 	pUnits := []*common.ProductUnit{}
 	for _, u := range units {
+		foundIds[uint64(u.ProductID)] = true
+
 		pUnits = append(pUnits, &common.ProductUnit{
 			ProductID: uint64(u.ProductID),
 			Quantity:  uint64(u.Quantity),
 		})
+	}
+
+	for _, id := range req.ProductIDs {
+		if _, ok := foundIds[id]; !ok {
+			pUnits = append(pUnits, &common.ProductUnit{
+				ProductID: id,
+				Quantity:  0,
+			})
+		}
 	}
 
 	return &api.CheckProductsResponse{

@@ -15,4 +15,5 @@ type Cache interface {
 	UpsertReviews(context.Context, types.ID, []models.Review) error
 	GetCart(context.Context, types.ID) (*models.Cart, error)
 	UpsertCart(context.Context, models.Cart) error
+	DeleteCart(ctx context.Context, id types.ID) error
 }

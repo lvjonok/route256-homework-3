@@ -25,6 +25,12 @@ type CacheMock struct {
 	beforeAppendReviewCounter uint64
 	AppendReviewMock          mCacheMockAppendReview
 
+	funcDeleteCart          func(ctx context.Context, id types.ID) (err error)
+	inspectFuncDeleteCart   func(ctx context.Context, id types.ID)
+	afterDeleteCartCounter  uint64
+	beforeDeleteCartCounter uint64
+	DeleteCartMock          mCacheMockDeleteCart
+
 	funcGetCart          func(ctx context.Context, i1 types.ID) (cp1 *models.Cart, err error)
 	inspectFuncGetCart   func(ctx context.Context, i1 types.ID)
 	afterGetCartCounter  uint64
@@ -71,6 +77,9 @@ func NewCacheMock(t minimock.Tester) *CacheMock {
 
 	m.AppendReviewMock = mCacheMockAppendReview{mock: m}
 	m.AppendReviewMock.callArgs = []*CacheMockAppendReviewParams{}
+
+	m.DeleteCartMock = mCacheMockDeleteCart{mock: m}
+	m.DeleteCartMock.callArgs = []*CacheMockDeleteCartParams{}
 
 	m.GetCartMock = mCacheMockGetCart{mock: m}
 	m.GetCartMock.callArgs = []*CacheMockGetCartParams{}
@@ -306,6 +315,222 @@ func (m *CacheMock) MinimockAppendReviewInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcAppendReview != nil && mm_atomic.LoadUint64(&m.afterAppendReviewCounter) < 1 {
 		m.t.Error("Expected call to CacheMock.AppendReview")
+	}
+}
+
+type mCacheMockDeleteCart struct {
+	mock               *CacheMock
+	defaultExpectation *CacheMockDeleteCartExpectation
+	expectations       []*CacheMockDeleteCartExpectation
+
+	callArgs []*CacheMockDeleteCartParams
+	mutex    sync.RWMutex
+}
+
+// CacheMockDeleteCartExpectation specifies expectation struct of the Cache.DeleteCart
+type CacheMockDeleteCartExpectation struct {
+	mock    *CacheMock
+	params  *CacheMockDeleteCartParams
+	results *CacheMockDeleteCartResults
+	Counter uint64
+}
+
+// CacheMockDeleteCartParams contains parameters of the Cache.DeleteCart
+type CacheMockDeleteCartParams struct {
+	ctx context.Context
+	id  types.ID
+}
+
+// CacheMockDeleteCartResults contains results of the Cache.DeleteCart
+type CacheMockDeleteCartResults struct {
+	err error
+}
+
+// Expect sets up expected params for Cache.DeleteCart
+func (mmDeleteCart *mCacheMockDeleteCart) Expect(ctx context.Context, id types.ID) *mCacheMockDeleteCart {
+	if mmDeleteCart.mock.funcDeleteCart != nil {
+		mmDeleteCart.mock.t.Fatalf("CacheMock.DeleteCart mock is already set by Set")
+	}
+
+	if mmDeleteCart.defaultExpectation == nil {
+		mmDeleteCart.defaultExpectation = &CacheMockDeleteCartExpectation{}
+	}
+
+	mmDeleteCart.defaultExpectation.params = &CacheMockDeleteCartParams{ctx, id}
+	for _, e := range mmDeleteCart.expectations {
+		if minimock.Equal(e.params, mmDeleteCart.defaultExpectation.params) {
+			mmDeleteCart.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmDeleteCart.defaultExpectation.params)
+		}
+	}
+
+	return mmDeleteCart
+}
+
+// Inspect accepts an inspector function that has same arguments as the Cache.DeleteCart
+func (mmDeleteCart *mCacheMockDeleteCart) Inspect(f func(ctx context.Context, id types.ID)) *mCacheMockDeleteCart {
+	if mmDeleteCart.mock.inspectFuncDeleteCart != nil {
+		mmDeleteCart.mock.t.Fatalf("Inspect function is already set for CacheMock.DeleteCart")
+	}
+
+	mmDeleteCart.mock.inspectFuncDeleteCart = f
+
+	return mmDeleteCart
+}
+
+// Return sets up results that will be returned by Cache.DeleteCart
+func (mmDeleteCart *mCacheMockDeleteCart) Return(err error) *CacheMock {
+	if mmDeleteCart.mock.funcDeleteCart != nil {
+		mmDeleteCart.mock.t.Fatalf("CacheMock.DeleteCart mock is already set by Set")
+	}
+
+	if mmDeleteCart.defaultExpectation == nil {
+		mmDeleteCart.defaultExpectation = &CacheMockDeleteCartExpectation{mock: mmDeleteCart.mock}
+	}
+	mmDeleteCart.defaultExpectation.results = &CacheMockDeleteCartResults{err}
+	return mmDeleteCart.mock
+}
+
+//Set uses given function f to mock the Cache.DeleteCart method
+func (mmDeleteCart *mCacheMockDeleteCart) Set(f func(ctx context.Context, id types.ID) (err error)) *CacheMock {
+	if mmDeleteCart.defaultExpectation != nil {
+		mmDeleteCart.mock.t.Fatalf("Default expectation is already set for the Cache.DeleteCart method")
+	}
+
+	if len(mmDeleteCart.expectations) > 0 {
+		mmDeleteCart.mock.t.Fatalf("Some expectations are already set for the Cache.DeleteCart method")
+	}
+
+	mmDeleteCart.mock.funcDeleteCart = f
+	return mmDeleteCart.mock
+}
+
+// When sets expectation for the Cache.DeleteCart which will trigger the result defined by the following
+// Then helper
+func (mmDeleteCart *mCacheMockDeleteCart) When(ctx context.Context, id types.ID) *CacheMockDeleteCartExpectation {
+	if mmDeleteCart.mock.funcDeleteCart != nil {
+		mmDeleteCart.mock.t.Fatalf("CacheMock.DeleteCart mock is already set by Set")
+	}
+
+	expectation := &CacheMockDeleteCartExpectation{
+		mock:   mmDeleteCart.mock,
+		params: &CacheMockDeleteCartParams{ctx, id},
+	}
+	mmDeleteCart.expectations = append(mmDeleteCart.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Cache.DeleteCart return parameters for the expectation previously defined by the When method
+func (e *CacheMockDeleteCartExpectation) Then(err error) *CacheMock {
+	e.results = &CacheMockDeleteCartResults{err}
+	return e.mock
+}
+
+// DeleteCart implements Cache
+func (mmDeleteCart *CacheMock) DeleteCart(ctx context.Context, id types.ID) (err error) {
+	mm_atomic.AddUint64(&mmDeleteCart.beforeDeleteCartCounter, 1)
+	defer mm_atomic.AddUint64(&mmDeleteCart.afterDeleteCartCounter, 1)
+
+	if mmDeleteCart.inspectFuncDeleteCart != nil {
+		mmDeleteCart.inspectFuncDeleteCart(ctx, id)
+	}
+
+	mm_params := &CacheMockDeleteCartParams{ctx, id}
+
+	// Record call args
+	mmDeleteCart.DeleteCartMock.mutex.Lock()
+	mmDeleteCart.DeleteCartMock.callArgs = append(mmDeleteCart.DeleteCartMock.callArgs, mm_params)
+	mmDeleteCart.DeleteCartMock.mutex.Unlock()
+
+	for _, e := range mmDeleteCart.DeleteCartMock.expectations {
+		if minimock.Equal(e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmDeleteCart.DeleteCartMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmDeleteCart.DeleteCartMock.defaultExpectation.Counter, 1)
+		mm_want := mmDeleteCart.DeleteCartMock.defaultExpectation.params
+		mm_got := CacheMockDeleteCartParams{ctx, id}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDeleteCart.t.Errorf("CacheMock.DeleteCart got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmDeleteCart.DeleteCartMock.defaultExpectation.results
+		if mm_results == nil {
+			mmDeleteCart.t.Fatal("No results are set for the CacheMock.DeleteCart")
+		}
+		return (*mm_results).err
+	}
+	if mmDeleteCart.funcDeleteCart != nil {
+		return mmDeleteCart.funcDeleteCart(ctx, id)
+	}
+	mmDeleteCart.t.Fatalf("Unexpected call to CacheMock.DeleteCart. %v %v", ctx, id)
+	return
+}
+
+// DeleteCartAfterCounter returns a count of finished CacheMock.DeleteCart invocations
+func (mmDeleteCart *CacheMock) DeleteCartAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmDeleteCart.afterDeleteCartCounter)
+}
+
+// DeleteCartBeforeCounter returns a count of CacheMock.DeleteCart invocations
+func (mmDeleteCart *CacheMock) DeleteCartBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmDeleteCart.beforeDeleteCartCounter)
+}
+
+// Calls returns a list of arguments used in each call to CacheMock.DeleteCart.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmDeleteCart *mCacheMockDeleteCart) Calls() []*CacheMockDeleteCartParams {
+	mmDeleteCart.mutex.RLock()
+
+	argCopy := make([]*CacheMockDeleteCartParams, len(mmDeleteCart.callArgs))
+	copy(argCopy, mmDeleteCart.callArgs)
+
+	mmDeleteCart.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockDeleteCartDone returns true if the count of the DeleteCart invocations corresponds
+// the number of defined expectations
+func (m *CacheMock) MinimockDeleteCartDone() bool {
+	for _, e := range m.DeleteCartMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.DeleteCartMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterDeleteCartCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcDeleteCart != nil && mm_atomic.LoadUint64(&m.afterDeleteCartCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockDeleteCartInspect logs each unmet expectation
+func (m *CacheMock) MinimockDeleteCartInspect() {
+	for _, e := range m.DeleteCartMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to CacheMock.DeleteCart with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.DeleteCartMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterDeleteCartCounter) < 1 {
+		if m.DeleteCartMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to CacheMock.DeleteCart")
+		} else {
+			m.t.Errorf("Expected call to CacheMock.DeleteCart with params: %#v", *m.DeleteCartMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcDeleteCart != nil && mm_atomic.LoadUint64(&m.afterDeleteCartCounter) < 1 {
+		m.t.Error("Expected call to CacheMock.DeleteCart")
 	}
 }
 
@@ -1614,6 +1839,8 @@ func (m *CacheMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockAppendReviewInspect()
 
+		m.MinimockDeleteCartInspect()
+
 		m.MinimockGetCartInspect()
 
 		m.MinimockGetProductInspect()
@@ -1649,6 +1876,7 @@ func (m *CacheMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockAppendReviewDone() &&
+		m.MinimockDeleteCartDone() &&
 		m.MinimockGetCartDone() &&
 		m.MinimockGetProductDone() &&
 		m.MinimockGetReviewsDone() &&

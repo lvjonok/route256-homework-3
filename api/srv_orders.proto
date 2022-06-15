@@ -5,7 +5,14 @@ option go_package = "gitlab.ozon.dev/lvjonok/homework-3/service_orders";
 
 message CreateOrderRequest { uint64 UserID = 1; };
 
-message CreateOrderResponse { uint64 OrderID = 1; };
+message CreateOrderResponse {
+  uint64 OrderID = 1;
+  string LastStatus = 2;
+};
+
+message ProcessOrderRequest { uint64 OrderID = 1; }
+
+message ProcessOrderResponse { string LastStatus = 1; }
 
 message CheckStatusRequest { uint64 OrderID = 1; };
 
@@ -20,6 +27,7 @@ message UpdateStatusResponse { uint64 OrderID = 1; };
 
 service Orders {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc ProcessOrder(ProcessOrderRequest) returns (ProcessOrderResponse);
   rpc CheckStatus(CheckStatusRequest) returns (CheckStatusResponse);
   rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
 }

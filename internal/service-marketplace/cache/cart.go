@@ -47,3 +47,15 @@ func (c *cache) UpsertCart(ctx context.Context, cart models.Cart) error {
 		Value: value,
 	})
 }
+
+func (c *cache) DeleteCart(ctx context.Context, id types.ID) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "CacheDeleteCart")
+	defer span.Finish()
+
+	key := fmt.Sprintf("cart%v", id)
+	if err := c.client.Delete(key); err != nil && err != memcache.ErrCacheMiss {
+		return fmt.Errorf("failed to delete cart key from cache, err: <%v>", err)
+	}
+
+	return nil
+}

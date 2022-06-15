@@ -22,7 +22,7 @@ services:
       file: base.yml
       service: db
     ports:
-      - 5432 # port of postgres
+      - 5433:5432 # port of postgres
     volumes:
       - marketplace-data:/var/lib/postgresql/data
     networks:
@@ -89,7 +89,7 @@ services:
       file: base.yml
       service: db
     ports:
-      - 5432 # port of postgres
+      - 5434:5432 # port of postgres
     volumes:
       - orders-data:/var/lib/postgresql/data
     networks:
@@ -127,7 +127,7 @@ services:
       file: base.yml
       service: db
     ports:
-      - 5432 # port of postgres
+      - 5435:5432 # port of postgres
     volumes:
       - warehouse-data:/var/lib/postgresql/data
     networks:

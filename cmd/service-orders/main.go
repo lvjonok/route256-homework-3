@@ -76,6 +76,9 @@ func main() {
 
 	newServer := service.New(repo.New(dbconn), metrics, log, mpClient, whClient)
 
+	// running worker
+	go newServer.SagaWorker(context.Background(), cfg.Saga)
+
 	lis, err := net.Listen("tcp", cfg.Server.URL)
 	if err != nil {
 		log.Sugar().Fatalf("failed to listen: %v", err)

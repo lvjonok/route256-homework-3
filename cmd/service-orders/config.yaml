@@ -15,3 +15,7 @@ clients:
   warehouse:
     url: srv-warehouse:8080
     timeout-ms: 100
+
+saga:
+  retries: 5
+  timeout-ms: 10000

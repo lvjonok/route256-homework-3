@@ -5,11 +5,11 @@ import (
 	"time"
 
 	types "gitlab.ozon.dev/lvjonok/homework-3/core/models"
+	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-orders/config"
 	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-orders/models"
-	common "gitlab.ozon.dev/lvjonok/homework-3/pkg/common/api"
+	"gitlab.ozon.dev/lvjonok/homework-3/internal/service-orders/repo"
 	service_marketplace "gitlab.ozon.dev/lvjonok/homework-3/pkg/srv_marketplace/api"
 	api "gitlab.ozon.dev/lvjonok/homework-3/pkg/srv_orders/api"
-	service_warehouse "gitlab.ozon.dev/lvjonok/homework-3/pkg/srv_warehouse/api"
 	"go.uber.org/zap"
 
 	"google.golang.org/grpc/codes"
@@ -26,35 +26,6 @@ func (s *Service) CreateOrder(ctx context.Context, req *api.CreateOrderRequest) 
 		return nil, status.Errorf(codes.Internal, "failed to get cart of user, err: <%v>", err)
 	}
 
-	// get current existing product units from warehouse
-	productIds := []uint64{}
-	for _, r := range cart.Products {
-		productIds = append(productIds, r.ProductID)
-	}
-	checkResp, err := s.whClient.CheckProducts(ctx, &service_warehouse.CheckProductsRequest{
-		ProductIDs: productIds,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get existing products from warehouse, err: <%v>", err)
-	}
-	existing := map[uint64]uint64{}
-	for _, el := range checkResp.Units {
-		existing[el.ProductID] = el.Quantity
-	}
-
-	// check that we have enough items
-	for _, want := range cart.Products {
-		if amount, ok := existing[want.ProductID]; !ok || amount < want.Quantity {
-			return nil, status.Errorf(codes.FailedPrecondition, "there are not enough products in the warehouse want: <%v>, exists: <%v>", want.Quantity, amount)
-		}
-	}
-
-	// book items in warehouse
-	bookingResp, err := s.whClient.BookProducts(ctx, &service_warehouse.BookProductsRequest{Units: cart.Products})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to book products in the warehouse, err: <%v>", err)
-	}
-
 	units := []types.ProductUnit{}
 	for _, r := range cart.Products {
 		units = append(units, types.ProductUnit{
@@ -63,53 +34,110 @@ func (s *Service) CreateOrder(ctx context.Context, req *api.CreateOrderRequest) 
 		})
 	}
 	id, err := s.DB.CreateOrder(ctx, &models.Order{
-		UserID:   types.ID(req.UserID),
-		Products: units,
-		Status:   "created",
+		UserID:     types.ID(req.UserID),
+		Products:   units,
+		Status:     "created",
+		SagaStatus: models.Created,
 	})
-
 	if err != nil {
-		// as we did not succeeded in order creation, we want to unlock items in warehouse for other people
-		go func(units []*common.ProductUnit) {
-			if _, err := s.whClient.UnbookProducts(ctx, &service_warehouse.UnbookProductsRequest{BookingIDs: bookingResp.BookingIDs}); err != nil {
-				// delay between calls
-				time.Sleep(100 * time.Millisecond)
-				s.Log.Error("failed to unbook products, retrying in 100ms", zap.Error(err))
+		return nil, status.Errorf(codes.Internal, "failed to create ")
+	}
+
+	endedStatus := models.Created
+
+	// start saga
+	saga, err := s.ProcessOrder(ctx, &api.ProcessOrderRequest{OrderID: uint64(*id)})
+	if err != nil {
+		s.Log.Sugar().Errorf("failed to proccess order, err: <%v>", err)
+	}
+	if saga != nil {
+		endedStatus = models.OrderStatus(saga.LastStatus)
+	}
+
+	return &api.CreateOrderResponse{OrderID: uint64(*id), LastStatus: string(endedStatus)}, nil
+}
+
+// ProcessOrder is orchestrating saga, accepting OrderID we want to process, it gets it and tries to run from the last step
+func (s *Service) ProcessOrder(ctx context.Context, req *api.ProcessOrderRequest) (*api.ProcessOrderResponse, error) {
+	order, err := s.DB.GetOrder(ctx, types.Int2ID(req.OrderID))
+	if err != nil && err == repo.ErrNotFound {
+		return nil, status.Errorf(codes.NotFound, "there is no order we could process")
+	} else if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get order to process, err: <%v>", err)
+	}
+
+	if order.SagaStatus == models.Created {
+		if err := s.handleCreated(ctx, order); err != nil {
+			// nothing to be compensated
+			go func(ctx context.Context, orderID types.ID) {
+				for i := 0; i < 5; i++ {
+					if reterr := s.DB.AddRetry(ctx, orderID, models.Created); reterr != nil {
+						s.Log.Sugar().Errorf("failed to add retry, err: <%v>", reterr)
+						time.Sleep(10 * time.Second)
+					} else {
+						// successfully added
+						return
+					}
+				}
+			}(context.Background(), order.OrderID)
+
+			return nil, err
+		}
+	}
+
+	if order.SagaStatus == models.Checked {
+		if err := s.handleChecked(ctx, order); err != nil {
+			// we either booked and it was successfully, or there is nothing to be compensated
+			go func(ctx context.Context, orderID types.ID) {
+				for i := 0; i < 5; i++ {
+					if reterr := s.DB.AddRetry(ctx, orderID, models.Checked); reterr != nil {
+						s.Log.Sugar().Errorf("failed to add retry, err: <%v>", reterr)
+						time.Sleep(10 * time.Second)
+					} else {
+						// successfully added
+						return
+					}
+				}
+			}(context.Background(), order.OrderID)
+			return nil, err
+		}
+	}
+
+	// we do not do anything after this
+	if order.SagaStatus == models.Booked {
+		return &api.ProcessOrderResponse{LastStatus: string(order.SagaStatus)}, nil
+	}
+
+	return &api.ProcessOrderResponse{LastStatus: string(order.SagaStatus)}, nil
+}
+
+// SagaWorker performs `saga cleanup` process, by trying to finish orders which are not in the final state
+func (s *Service) SagaWorker(ctx context.Context, cfg config.SagaConfig) {
+	for {
+		s.Log.Debug("starting saga worker loop")
+
+		ids, err := s.DB.GetProcessingOrders(ctx, cfg.Retries)
+		if err != nil {
+			s.Log.Sugar().Error(status.Errorf(codes.Internal, "failed to get processing orders, err: <%v>", err))
+		}
+
+		for _, i := range ids {
+			s.Log.Debug("processing order", zap.Uint("id", uint(i)))
+
+			sagastatus, serr := s.ProcessOrder(ctx, &api.ProcessOrderRequest{OrderID: uint64(i)})
+			s.Log.Debug("processing result", zap.Any("saga status", sagastatus), zap.Error(serr))
+
+			if serr != nil {
+				s.Log.Sugar().Error(status.Errorf(codes.Internal, "failed to process order <%v>, err: <%v>", i, err))
 			}
-			// inlocking items in warehouse
-		}(cart.Products)
+			if sagastatus != nil {
+				if err := s.DB.AddRetry(ctx, i, models.OrderStatus(sagastatus.LastStatus)); err != nil {
+					s.Log.Sugar().Error("failed to add retry for order, err: <%v>", err)
+				}
+			}
+		}
 
-		s.Metrics.CreateOrderErrorsInc()
-		return nil, status.Errorf(codes.Internal, "failed to create a new order")
+		s.Log.Debug("saga worker sleep")
+		time.Sleep(time.Duration(cfg.TimeoutMs) * time.Millisecond)
 	}
-
-	return &api.CreateOrderResponse{OrderID: uint64(*id)}, nil
-}
-
-// CheckStatus simply returns status of asked order
-func (s *Service) CheckStatus(ctx context.Context, req *api.CheckStatusRequest) (*api.CheckStatusResponse, error) {
-	s.Metrics.CheckStatusInc()
-
-	orderStatus, err := s.DB.CheckStatus(ctx, types.Int2ID(req.OrderID))
-	if err != nil {
-		s.Metrics.CheckStatusErrorsInc()
-		return nil, status.Errorf(codes.Internal, "failed to get status of order, err: <%v>", err)
-	}
-
-	return &api.CheckStatusResponse{Status: orderStatus}, nil
-}
-
-// UpdateStatus sets new status for asked order
-func (s *Service) UpdateStatus(ctx context.Context, req *api.UpdateStatusRequest) (*api.UpdateStatusResponse, error) {
-	s.Metrics.UpdateStatusInc()
-
-	if err := s.DB.UpdateStatus(ctx, &models.Order{
-		OrderID: types.ID(req.OrderID),
-		Status:  req.Status,
-	}); err != nil {
-		s.Metrics.UpdateStatusErrorsInc()
-		return nil, status.Errorf(codes.Internal, "failed to update status of order, err: <%v>", err)
-	}
-
-	return &api.UpdateStatusResponse{OrderID: req.OrderID}, nil
 }

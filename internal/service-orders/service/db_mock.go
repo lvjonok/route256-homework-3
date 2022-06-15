@@ -19,6 +19,12 @@ import (
 type DBMock struct {
 	t minimock.Tester
 
+	funcAddRetry          func(ctx context.Context, order_id types.ID, saga models.OrderStatus) (err error)
+	inspectFuncAddRetry   func(ctx context.Context, order_id types.ID, saga models.OrderStatus)
+	afterAddRetryCounter  uint64
+	beforeAddRetryCounter uint64
+	AddRetryMock          mDBMockAddRetry
+
 	funcCheckStatus          func(ctx context.Context, ip1 *types.ID) (s1 string, err error)
 	inspectFuncCheckStatus   func(ctx context.Context, ip1 *types.ID)
 	afterCheckStatusCounter  uint64
@@ -30,6 +36,24 @@ type DBMock struct {
 	afterCreateOrderCounter  uint64
 	beforeCreateOrderCounter uint64
 	CreateOrderMock          mDBMockCreateOrder
+
+	funcGetOrder          func(ctx context.Context, ip1 *types.ID) (op1 *models.Order, err error)
+	inspectFuncGetOrder   func(ctx context.Context, ip1 *types.ID)
+	afterGetOrderCounter  uint64
+	beforeGetOrderCounter uint64
+	GetOrderMock          mDBMockGetOrder
+
+	funcGetProcessingOrders          func(ctx context.Context, retries int) (ia1 []types.ID, err error)
+	inspectFuncGetProcessingOrders   func(ctx context.Context, retries int)
+	afterGetProcessingOrdersCounter  uint64
+	beforeGetProcessingOrdersCounter uint64
+	GetProcessingOrdersMock          mDBMockGetProcessingOrders
+
+	funcUpdateOrderSagaStatus          func(ctx context.Context, order *models.Order) (err error)
+	inspectFuncUpdateOrderSagaStatus   func(ctx context.Context, order *models.Order)
+	afterUpdateOrderSagaStatusCounter  uint64
+	beforeUpdateOrderSagaStatusCounter uint64
+	UpdateOrderSagaStatusMock          mDBMockUpdateOrderSagaStatus
 
 	funcUpdateStatus          func(ctx context.Context, op1 *models.Order) (err error)
 	inspectFuncUpdateStatus   func(ctx context.Context, op1 *models.Order)
@@ -45,16 +69,245 @@ func NewDBMock(t minimock.Tester) *DBMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.AddRetryMock = mDBMockAddRetry{mock: m}
+	m.AddRetryMock.callArgs = []*DBMockAddRetryParams{}
+
 	m.CheckStatusMock = mDBMockCheckStatus{mock: m}
 	m.CheckStatusMock.callArgs = []*DBMockCheckStatusParams{}
 
 	m.CreateOrderMock = mDBMockCreateOrder{mock: m}
 	m.CreateOrderMock.callArgs = []*DBMockCreateOrderParams{}
 
+	m.GetOrderMock = mDBMockGetOrder{mock: m}
+	m.GetOrderMock.callArgs = []*DBMockGetOrderParams{}
+
+	m.GetProcessingOrdersMock = mDBMockGetProcessingOrders{mock: m}
+	m.GetProcessingOrdersMock.callArgs = []*DBMockGetProcessingOrdersParams{}
+
+	m.UpdateOrderSagaStatusMock = mDBMockUpdateOrderSagaStatus{mock: m}
+	m.UpdateOrderSagaStatusMock.callArgs = []*DBMockUpdateOrderSagaStatusParams{}
+
 	m.UpdateStatusMock = mDBMockUpdateStatus{mock: m}
 	m.UpdateStatusMock.callArgs = []*DBMockUpdateStatusParams{}
 
 	return m
+}
+
+type mDBMockAddRetry struct {
+	mock               *DBMock
+	defaultExpectation *DBMockAddRetryExpectation
+	expectations       []*DBMockAddRetryExpectation
+
+	callArgs []*DBMockAddRetryParams
+	mutex    sync.RWMutex
+}
+
+// DBMockAddRetryExpectation specifies expectation struct of the DB.AddRetry
+type DBMockAddRetryExpectation struct {
+	mock    *DBMock
+	params  *DBMockAddRetryParams
+	results *DBMockAddRetryResults
+	Counter uint64
+}
+
+// DBMockAddRetryParams contains parameters of the DB.AddRetry
+type DBMockAddRetryParams struct {
+	ctx      context.Context
+	order_id types.ID
+	saga     models.OrderStatus
+}
+
+// DBMockAddRetryResults contains results of the DB.AddRetry
+type DBMockAddRetryResults struct {
+	err error
+}
+
+// Expect sets up expected params for DB.AddRetry
+func (mmAddRetry *mDBMockAddRetry) Expect(ctx context.Context, order_id types.ID, saga models.OrderStatus) *mDBMockAddRetry {
+	if mmAddRetry.mock.funcAddRetry != nil {
+		mmAddRetry.mock.t.Fatalf("DBMock.AddRetry mock is already set by Set")
+	}
+
+	if mmAddRetry.defaultExpectation == nil {
+		mmAddRetry.defaultExpectation = &DBMockAddRetryExpectation{}
+	}
+
+	mmAddRetry.defaultExpectation.params = &DBMockAddRetryParams{ctx, order_id, saga}
+	for _, e := range mmAddRetry.expectations {
+		if minimock.Equal(e.params, mmAddRetry.defaultExpectation.params) {
+			mmAddRetry.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmAddRetry.defaultExpectation.params)
+		}
+	}
+
+	return mmAddRetry
+}
+
+// Inspect accepts an inspector function that has same arguments as the DB.AddRetry
+func (mmAddRetry *mDBMockAddRetry) Inspect(f func(ctx context.Context, order_id types.ID, saga models.OrderStatus)) *mDBMockAddRetry {
+	if mmAddRetry.mock.inspectFuncAddRetry != nil {
+		mmAddRetry.mock.t.Fatalf("Inspect function is already set for DBMock.AddRetry")
+	}
+
+	mmAddRetry.mock.inspectFuncAddRetry = f
+
+	return mmAddRetry
+}
+
+// Return sets up results that will be returned by DB.AddRetry
+func (mmAddRetry *mDBMockAddRetry) Return(err error) *DBMock {
+	if mmAddRetry.mock.funcAddRetry != nil {
+		mmAddRetry.mock.t.Fatalf("DBMock.AddRetry mock is already set by Set")
+	}
+
+	if mmAddRetry.defaultExpectation == nil {
+		mmAddRetry.defaultExpectation = &DBMockAddRetryExpectation{mock: mmAddRetry.mock}
+	}
+	mmAddRetry.defaultExpectation.results = &DBMockAddRetryResults{err}
+	return mmAddRetry.mock
+}
+
+//Set uses given function f to mock the DB.AddRetry method
+func (mmAddRetry *mDBMockAddRetry) Set(f func(ctx context.Context, order_id types.ID, saga models.OrderStatus) (err error)) *DBMock {
+	if mmAddRetry.defaultExpectation != nil {
+		mmAddRetry.mock.t.Fatalf("Default expectation is already set for the DB.AddRetry method")
+	}
+
+	if len(mmAddRetry.expectations) > 0 {
+		mmAddRetry.mock.t.Fatalf("Some expectations are already set for the DB.AddRetry method")
+	}
+
+	mmAddRetry.mock.funcAddRetry = f
+	return mmAddRetry.mock
+}
+
+// When sets expectation for the DB.AddRetry which will trigger the result defined by the following
+// Then helper
+func (mmAddRetry *mDBMockAddRetry) When(ctx context.Context, order_id types.ID, saga models.OrderStatus) *DBMockAddRetryExpectation {
+	if mmAddRetry.mock.funcAddRetry != nil {
+		mmAddRetry.mock.t.Fatalf("DBMock.AddRetry mock is already set by Set")
+	}
+
+	expectation := &DBMockAddRetryExpectation{
+		mock:   mmAddRetry.mock,
+		params: &DBMockAddRetryParams{ctx, order_id, saga},
+	}
+	mmAddRetry.expectations = append(mmAddRetry.expectations, expectation)
+	return expectation
+}
+
+// Then sets up DB.AddRetry return parameters for the expectation previously defined by the When method
+func (e *DBMockAddRetryExpectation) Then(err error) *DBMock {
+	e.results = &DBMockAddRetryResults{err}
+	return e.mock
+}
+
+// AddRetry implements DB
+func (mmAddRetry *DBMock) AddRetry(ctx context.Context, order_id types.ID, saga models.OrderStatus) (err error) {
+	mm_atomic.AddUint64(&mmAddRetry.beforeAddRetryCounter, 1)
+	defer mm_atomic.AddUint64(&mmAddRetry.afterAddRetryCounter, 1)
+
+	if mmAddRetry.inspectFuncAddRetry != nil {
+		mmAddRetry.inspectFuncAddRetry(ctx, order_id, saga)
+	}
+
+	mm_params := &DBMockAddRetryParams{ctx, order_id, saga}
+
+	// Record call args
+	mmAddRetry.AddRetryMock.mutex.Lock()
+	mmAddRetry.AddRetryMock.callArgs = append(mmAddRetry.AddRetryMock.callArgs, mm_params)
+	mmAddRetry.AddRetryMock.mutex.Unlock()
+
+	for _, e := range mmAddRetry.AddRetryMock.expectations {
+		if minimock.Equal(e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmAddRetry.AddRetryMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmAddRetry.AddRetryMock.defaultExpectation.Counter, 1)
+		mm_want := mmAddRetry.AddRetryMock.defaultExpectation.params
+		mm_got := DBMockAddRetryParams{ctx, order_id, saga}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAddRetry.t.Errorf("DBMock.AddRetry got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmAddRetry.AddRetryMock.defaultExpectation.results
+		if mm_results == nil {
+			mmAddRetry.t.Fatal("No results are set for the DBMock.AddRetry")
+		}
+		return (*mm_results).err
+	}
+	if mmAddRetry.funcAddRetry != nil {
+		return mmAddRetry.funcAddRetry(ctx, order_id, saga)
+	}
+	mmAddRetry.t.Fatalf("Unexpected call to DBMock.AddRetry. %v %v %v", ctx, order_id, saga)
+	return
+}
+
+// AddRetryAfterCounter returns a count of finished DBMock.AddRetry invocations
+func (mmAddRetry *DBMock) AddRetryAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAddRetry.afterAddRetryCounter)
+}
+
+// AddRetryBeforeCounter returns a count of DBMock.AddRetry invocations
+func (mmAddRetry *DBMock) AddRetryBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAddRetry.beforeAddRetryCounter)
+}
+
+// Calls returns a list of arguments used in each call to DBMock.AddRetry.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmAddRetry *mDBMockAddRetry) Calls() []*DBMockAddRetryParams {
+	mmAddRetry.mutex.RLock()
+
+	argCopy := make([]*DBMockAddRetryParams, len(mmAddRetry.callArgs))
+	copy(argCopy, mmAddRetry.callArgs)
+
+	mmAddRetry.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockAddRetryDone returns true if the count of the AddRetry invocations corresponds
+// the number of defined expectations
+func (m *DBMock) MinimockAddRetryDone() bool {
+	for _, e := range m.AddRetryMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.AddRetryMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAddRetryCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcAddRetry != nil && mm_atomic.LoadUint64(&m.afterAddRetryCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockAddRetryInspect logs each unmet expectation
+func (m *DBMock) MinimockAddRetryInspect() {
+	for _, e := range m.AddRetryMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to DBMock.AddRetry with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.AddRetryMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAddRetryCounter) < 1 {
+		if m.AddRetryMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to DBMock.AddRetry")
+		} else {
+			m.t.Errorf("Expected call to DBMock.AddRetry with params: %#v", *m.AddRetryMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcAddRetry != nil && mm_atomic.LoadUint64(&m.afterAddRetryCounter) < 1 {
+		m.t.Error("Expected call to DBMock.AddRetry")
+	}
 }
 
 type mDBMockCheckStatus struct {
@@ -491,6 +744,656 @@ func (m *DBMock) MinimockCreateOrderInspect() {
 	}
 }
 
+type mDBMockGetOrder struct {
+	mock               *DBMock
+	defaultExpectation *DBMockGetOrderExpectation
+	expectations       []*DBMockGetOrderExpectation
+
+	callArgs []*DBMockGetOrderParams
+	mutex    sync.RWMutex
+}
+
+// DBMockGetOrderExpectation specifies expectation struct of the DB.GetOrder
+type DBMockGetOrderExpectation struct {
+	mock    *DBMock
+	params  *DBMockGetOrderParams
+	results *DBMockGetOrderResults
+	Counter uint64
+}
+
+// DBMockGetOrderParams contains parameters of the DB.GetOrder
+type DBMockGetOrderParams struct {
+	ctx context.Context
+	ip1 *types.ID
+}
+
+// DBMockGetOrderResults contains results of the DB.GetOrder
+type DBMockGetOrderResults struct {
+	op1 *models.Order
+	err error
+}
+
+// Expect sets up expected params for DB.GetOrder
+func (mmGetOrder *mDBMockGetOrder) Expect(ctx context.Context, ip1 *types.ID) *mDBMockGetOrder {
+	if mmGetOrder.mock.funcGetOrder != nil {
+		mmGetOrder.mock.t.Fatalf("DBMock.GetOrder mock is already set by Set")
+	}
+
+	if mmGetOrder.defaultExpectation == nil {
+		mmGetOrder.defaultExpectation = &DBMockGetOrderExpectation{}
+	}
+
+	mmGetOrder.defaultExpectation.params = &DBMockGetOrderParams{ctx, ip1}
+	for _, e := range mmGetOrder.expectations {
+		if minimock.Equal(e.params, mmGetOrder.defaultExpectation.params) {
+			mmGetOrder.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetOrder.defaultExpectation.params)
+		}
+	}
+
+	return mmGetOrder
+}
+
+// Inspect accepts an inspector function that has same arguments as the DB.GetOrder
+func (mmGetOrder *mDBMockGetOrder) Inspect(f func(ctx context.Context, ip1 *types.ID)) *mDBMockGetOrder {
+	if mmGetOrder.mock.inspectFuncGetOrder != nil {
+		mmGetOrder.mock.t.Fatalf("Inspect function is already set for DBMock.GetOrder")
+	}
+
+	mmGetOrder.mock.inspectFuncGetOrder = f
+
+	return mmGetOrder
+}
+
+// Return sets up results that will be returned by DB.GetOrder
+func (mmGetOrder *mDBMockGetOrder) Return(op1 *models.Order, err error) *DBMock {
+	if mmGetOrder.mock.funcGetOrder != nil {
+		mmGetOrder.mock.t.Fatalf("DBMock.GetOrder mock is already set by Set")
+	}
+
+	if mmGetOrder.defaultExpectation == nil {
+		mmGetOrder.defaultExpectation = &DBMockGetOrderExpectation{mock: mmGetOrder.mock}
+	}
+	mmGetOrder.defaultExpectation.results = &DBMockGetOrderResults{op1, err}
+	return mmGetOrder.mock
+}
+
+//Set uses given function f to mock the DB.GetOrder method
+func (mmGetOrder *mDBMockGetOrder) Set(f func(ctx context.Context, ip1 *types.ID) (op1 *models.Order, err error)) *DBMock {
+	if mmGetOrder.defaultExpectation != nil {
+		mmGetOrder.mock.t.Fatalf("Default expectation is already set for the DB.GetOrder method")
+	}
+
+	if len(mmGetOrder.expectations) > 0 {
+		mmGetOrder.mock.t.Fatalf("Some expectations are already set for the DB.GetOrder method")
+	}
+
+	mmGetOrder.mock.funcGetOrder = f
+	return mmGetOrder.mock
+}
+
+// When sets expectation for the DB.GetOrder which will trigger the result defined by the following
+// Then helper
+func (mmGetOrder *mDBMockGetOrder) When(ctx context.Context, ip1 *types.ID) *DBMockGetOrderExpectation {
+	if mmGetOrder.mock.funcGetOrder != nil {
+		mmGetOrder.mock.t.Fatalf("DBMock.GetOrder mock is already set by Set")
+	}
+
+	expectation := &DBMockGetOrderExpectation{
+		mock:   mmGetOrder.mock,
+		params: &DBMockGetOrderParams{ctx, ip1},
+	}
+	mmGetOrder.expectations = append(mmGetOrder.expectations, expectation)
+	return expectation
+}
+
+// Then sets up DB.GetOrder return parameters for the expectation previously defined by the When method
+func (e *DBMockGetOrderExpectation) Then(op1 *models.Order, err error) *DBMock {
+	e.results = &DBMockGetOrderResults{op1, err}
+	return e.mock
+}
+
+// GetOrder implements DB
+func (mmGetOrder *DBMock) GetOrder(ctx context.Context, ip1 *types.ID) (op1 *models.Order, err error) {
+	mm_atomic.AddUint64(&mmGetOrder.beforeGetOrderCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetOrder.afterGetOrderCounter, 1)
+
+	if mmGetOrder.inspectFuncGetOrder != nil {
+		mmGetOrder.inspectFuncGetOrder(ctx, ip1)
+	}
+
+	mm_params := &DBMockGetOrderParams{ctx, ip1}
+
+	// Record call args
+	mmGetOrder.GetOrderMock.mutex.Lock()
+	mmGetOrder.GetOrderMock.callArgs = append(mmGetOrder.GetOrderMock.callArgs, mm_params)
+	mmGetOrder.GetOrderMock.mutex.Unlock()
+
+	for _, e := range mmGetOrder.GetOrderMock.expectations {
+		if minimock.Equal(e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.op1, e.results.err
+		}
+	}
+
+	if mmGetOrder.GetOrderMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetOrder.GetOrderMock.defaultExpectation.Counter, 1)
+		mm_want := mmGetOrder.GetOrderMock.defaultExpectation.params
+		mm_got := DBMockGetOrderParams{ctx, ip1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetOrder.t.Errorf("DBMock.GetOrder got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmGetOrder.GetOrderMock.defaultExpectation.results
+		if mm_results == nil {
+			mmGetOrder.t.Fatal("No results are set for the DBMock.GetOrder")
+		}
+		return (*mm_results).op1, (*mm_results).err
+	}
+	if mmGetOrder.funcGetOrder != nil {
+		return mmGetOrder.funcGetOrder(ctx, ip1)
+	}
+	mmGetOrder.t.Fatalf("Unexpected call to DBMock.GetOrder. %v %v", ctx, ip1)
+	return
+}
+
+// GetOrderAfterCounter returns a count of finished DBMock.GetOrder invocations
+func (mmGetOrder *DBMock) GetOrderAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetOrder.afterGetOrderCounter)
+}
+
+// GetOrderBeforeCounter returns a count of DBMock.GetOrder invocations
+func (mmGetOrder *DBMock) GetOrderBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetOrder.beforeGetOrderCounter)
+}
+
+// Calls returns a list of arguments used in each call to DBMock.GetOrder.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmGetOrder *mDBMockGetOrder) Calls() []*DBMockGetOrderParams {
+	mmGetOrder.mutex.RLock()
+
+	argCopy := make([]*DBMockGetOrderParams, len(mmGetOrder.callArgs))
+	copy(argCopy, mmGetOrder.callArgs)
+
+	mmGetOrder.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockGetOrderDone returns true if the count of the GetOrder invocations corresponds
+// the number of defined expectations
+func (m *DBMock) MinimockGetOrderDone() bool {
+	for _, e := range m.GetOrderMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetOrderMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetOrderCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetOrder != nil && mm_atomic.LoadUint64(&m.afterGetOrderCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockGetOrderInspect logs each unmet expectation
+func (m *DBMock) MinimockGetOrderInspect() {
+	for _, e := range m.GetOrderMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to DBMock.GetOrder with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetOrderMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetOrderCounter) < 1 {
+		if m.GetOrderMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to DBMock.GetOrder")
+		} else {
+			m.t.Errorf("Expected call to DBMock.GetOrder with params: %#v", *m.GetOrderMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetOrder != nil && mm_atomic.LoadUint64(&m.afterGetOrderCounter) < 1 {
+		m.t.Error("Expected call to DBMock.GetOrder")
+	}
+}
+
+type mDBMockGetProcessingOrders struct {
+	mock               *DBMock
+	defaultExpectation *DBMockGetProcessingOrdersExpectation
+	expectations       []*DBMockGetProcessingOrdersExpectation
+
+	callArgs []*DBMockGetProcessingOrdersParams
+	mutex    sync.RWMutex
+}
+
+// DBMockGetProcessingOrdersExpectation specifies expectation struct of the DB.GetProcessingOrders
+type DBMockGetProcessingOrdersExpectation struct {
+	mock    *DBMock
+	params  *DBMockGetProcessingOrdersParams
+	results *DBMockGetProcessingOrdersResults
+	Counter uint64
+}
+
+// DBMockGetProcessingOrdersParams contains parameters of the DB.GetProcessingOrders
+type DBMockGetProcessingOrdersParams struct {
+	ctx     context.Context
+	retries int
+}
+
+// DBMockGetProcessingOrdersResults contains results of the DB.GetProcessingOrders
+type DBMockGetProcessingOrdersResults struct {
+	ia1 []types.ID
+	err error
+}
+
+// Expect sets up expected params for DB.GetProcessingOrders
+func (mmGetProcessingOrders *mDBMockGetProcessingOrders) Expect(ctx context.Context, retries int) *mDBMockGetProcessingOrders {
+	if mmGetProcessingOrders.mock.funcGetProcessingOrders != nil {
+		mmGetProcessingOrders.mock.t.Fatalf("DBMock.GetProcessingOrders mock is already set by Set")
+	}
+
+	if mmGetProcessingOrders.defaultExpectation == nil {
+		mmGetProcessingOrders.defaultExpectation = &DBMockGetProcessingOrdersExpectation{}
+	}
+
+	mmGetProcessingOrders.defaultExpectation.params = &DBMockGetProcessingOrdersParams{ctx, retries}
+	for _, e := range mmGetProcessingOrders.expectations {
+		if minimock.Equal(e.params, mmGetProcessingOrders.defaultExpectation.params) {
+			mmGetProcessingOrders.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetProcessingOrders.defaultExpectation.params)
+		}
+	}
+
+	return mmGetProcessingOrders
+}
+
+// Inspect accepts an inspector function that has same arguments as the DB.GetProcessingOrders
+func (mmGetProcessingOrders *mDBMockGetProcessingOrders) Inspect(f func(ctx context.Context, retries int)) *mDBMockGetProcessingOrders {
+	if mmGetProcessingOrders.mock.inspectFuncGetProcessingOrders != nil {
+		mmGetProcessingOrders.mock.t.Fatalf("Inspect function is already set for DBMock.GetProcessingOrders")
+	}
+
+	mmGetProcessingOrders.mock.inspectFuncGetProcessingOrders = f
+
+	return mmGetProcessingOrders
+}
+
+// Return sets up results that will be returned by DB.GetProcessingOrders
+func (mmGetProcessingOrders *mDBMockGetProcessingOrders) Return(ia1 []types.ID, err error) *DBMock {
+	if mmGetProcessingOrders.mock.funcGetProcessingOrders != nil {
+		mmGetProcessingOrders.mock.t.Fatalf("DBMock.GetProcessingOrders mock is already set by Set")
+	}
+
+	if mmGetProcessingOrders.defaultExpectation == nil {
+		mmGetProcessingOrders.defaultExpectation = &DBMockGetProcessingOrdersExpectation{mock: mmGetProcessingOrders.mock}
+	}
+	mmGetProcessingOrders.defaultExpectation.results = &DBMockGetProcessingOrdersResults{ia1, err}
+	return mmGetProcessingOrders.mock
+}
+
+//Set uses given function f to mock the DB.GetProcessingOrders method
+func (mmGetProcessingOrders *mDBMockGetProcessingOrders) Set(f func(ctx context.Context, retries int) (ia1 []types.ID, err error)) *DBMock {
+	if mmGetProcessingOrders.defaultExpectation != nil {
+		mmGetProcessingOrders.mock.t.Fatalf("Default expectation is already set for the DB.GetProcessingOrders method")
+	}
+
+	if len(mmGetProcessingOrders.expectations) > 0 {
+		mmGetProcessingOrders.mock.t.Fatalf("Some expectations are already set for the DB.GetProcessingOrders method")
+	}
+
+	mmGetProcessingOrders.mock.funcGetProcessingOrders = f
+	return mmGetProcessingOrders.mock
+}
+
+// When sets expectation for the DB.GetProcessingOrders which will trigger the result defined by the following
+// Then helper
+func (mmGetProcessingOrders *mDBMockGetProcessingOrders) When(ctx context.Context, retries int) *DBMockGetProcessingOrdersExpectation {
+	if mmGetProcessingOrders.mock.funcGetProcessingOrders != nil {
+		mmGetProcessingOrders.mock.t.Fatalf("DBMock.GetProcessingOrders mock is already set by Set")
+	}
+
+	expectation := &DBMockGetProcessingOrdersExpectation{
+		mock:   mmGetProcessingOrders.mock,
+		params: &DBMockGetProcessingOrdersParams{ctx, retries},
+	}
+	mmGetProcessingOrders.expectations = append(mmGetProcessingOrders.expectations, expectation)
+	return expectation
+}
+
+// Then sets up DB.GetProcessingOrders return parameters for the expectation previously defined by the When method
+func (e *DBMockGetProcessingOrdersExpectation) Then(ia1 []types.ID, err error) *DBMock {
+	e.results = &DBMockGetProcessingOrdersResults{ia1, err}
+	return e.mock
+}
+
+// GetProcessingOrders implements DB
+func (mmGetProcessingOrders *DBMock) GetProcessingOrders(ctx context.Context, retries int) (ia1 []types.ID, err error) {
+	mm_atomic.AddUint64(&mmGetProcessingOrders.beforeGetProcessingOrdersCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetProcessingOrders.afterGetProcessingOrdersCounter, 1)
+
+	if mmGetProcessingOrders.inspectFuncGetProcessingOrders != nil {
+		mmGetProcessingOrders.inspectFuncGetProcessingOrders(ctx, retries)
+	}
+
+	mm_params := &DBMockGetProcessingOrdersParams{ctx, retries}
+
+	// Record call args
+	mmGetProcessingOrders.GetProcessingOrdersMock.mutex.Lock()
+	mmGetProcessingOrders.GetProcessingOrdersMock.callArgs = append(mmGetProcessingOrders.GetProcessingOrdersMock.callArgs, mm_params)
+	mmGetProcessingOrders.GetProcessingOrdersMock.mutex.Unlock()
+
+	for _, e := range mmGetProcessingOrders.GetProcessingOrdersMock.expectations {
+		if minimock.Equal(e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.ia1, e.results.err
+		}
+	}
+
+	if mmGetProcessingOrders.GetProcessingOrdersMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetProcessingOrders.GetProcessingOrdersMock.defaultExpectation.Counter, 1)
+		mm_want := mmGetProcessingOrders.GetProcessingOrdersMock.defaultExpectation.params
+		mm_got := DBMockGetProcessingOrdersParams{ctx, retries}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetProcessingOrders.t.Errorf("DBMock.GetProcessingOrders got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmGetProcessingOrders.GetProcessingOrdersMock.defaultExpectation.results
+		if mm_results == nil {
+			mmGetProcessingOrders.t.Fatal("No results are set for the DBMock.GetProcessingOrders")
+		}
+		return (*mm_results).ia1, (*mm_results).err
+	}
+	if mmGetProcessingOrders.funcGetProcessingOrders != nil {
+		return mmGetProcessingOrders.funcGetProcessingOrders(ctx, retries)
+	}
+	mmGetProcessingOrders.t.Fatalf("Unexpected call to DBMock.GetProcessingOrders. %v %v", ctx, retries)
+	return
+}
+
+// GetProcessingOrdersAfterCounter returns a count of finished DBMock.GetProcessingOrders invocations
+func (mmGetProcessingOrders *DBMock) GetProcessingOrdersAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetProcessingOrders.afterGetProcessingOrdersCounter)
+}
+
+// GetProcessingOrdersBeforeCounter returns a count of DBMock.GetProcessingOrders invocations
+func (mmGetProcessingOrders *DBMock) GetProcessingOrdersBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetProcessingOrders.beforeGetProcessingOrdersCounter)
+}
+
+// Calls returns a list of arguments used in each call to DBMock.GetProcessingOrders.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmGetProcessingOrders *mDBMockGetProcessingOrders) Calls() []*DBMockGetProcessingOrdersParams {
+	mmGetProcessingOrders.mutex.RLock()
+
+	argCopy := make([]*DBMockGetProcessingOrdersParams, len(mmGetProcessingOrders.callArgs))
+	copy(argCopy, mmGetProcessingOrders.callArgs)
+
+	mmGetProcessingOrders.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockGetProcessingOrdersDone returns true if the count of the GetProcessingOrders invocations corresponds
+// the number of defined expectations
+func (m *DBMock) MinimockGetProcessingOrdersDone() bool {
+	for _, e := range m.GetProcessingOrdersMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetProcessingOrdersMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetProcessingOrdersCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetProcessingOrders != nil && mm_atomic.LoadUint64(&m.afterGetProcessingOrdersCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockGetProcessingOrdersInspect logs each unmet expectation
+func (m *DBMock) MinimockGetProcessingOrdersInspect() {
+	for _, e := range m.GetProcessingOrdersMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to DBMock.GetProcessingOrders with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetProcessingOrdersMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetProcessingOrdersCounter) < 1 {
+		if m.GetProcessingOrdersMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to DBMock.GetProcessingOrders")
+		} else {
+			m.t.Errorf("Expected call to DBMock.GetProcessingOrders with params: %#v", *m.GetProcessingOrdersMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetProcessingOrders != nil && mm_atomic.LoadUint64(&m.afterGetProcessingOrdersCounter) < 1 {
+		m.t.Error("Expected call to DBMock.GetProcessingOrders")
+	}
+}
+
+type mDBMockUpdateOrderSagaStatus struct {
+	mock               *DBMock
+	defaultExpectation *DBMockUpdateOrderSagaStatusExpectation
+	expectations       []*DBMockUpdateOrderSagaStatusExpectation
+
+	callArgs []*DBMockUpdateOrderSagaStatusParams
+	mutex    sync.RWMutex
+}
+
+// DBMockUpdateOrderSagaStatusExpectation specifies expectation struct of the DB.UpdateOrderSagaStatus
+type DBMockUpdateOrderSagaStatusExpectation struct {
+	mock    *DBMock
+	params  *DBMockUpdateOrderSagaStatusParams
+	results *DBMockUpdateOrderSagaStatusResults
+	Counter uint64
+}
+
+// DBMockUpdateOrderSagaStatusParams contains parameters of the DB.UpdateOrderSagaStatus
+type DBMockUpdateOrderSagaStatusParams struct {
+	ctx   context.Context
+	order *models.Order
+}
+
+// DBMockUpdateOrderSagaStatusResults contains results of the DB.UpdateOrderSagaStatus
+type DBMockUpdateOrderSagaStatusResults struct {
+	err error
+}
+
+// Expect sets up expected params for DB.UpdateOrderSagaStatus
+func (mmUpdateOrderSagaStatus *mDBMockUpdateOrderSagaStatus) Expect(ctx context.Context, order *models.Order) *mDBMockUpdateOrderSagaStatus {
+	if mmUpdateOrderSagaStatus.mock.funcUpdateOrderSagaStatus != nil {
+		mmUpdateOrderSagaStatus.mock.t.Fatalf("DBMock.UpdateOrderSagaStatus mock is already set by Set")
+	}
+
+	if mmUpdateOrderSagaStatus.defaultExpectation == nil {
+		mmUpdateOrderSagaStatus.defaultExpectation = &DBMockUpdateOrderSagaStatusExpectation{}
+	}
+
+	mmUpdateOrderSagaStatus.defaultExpectation.params = &DBMockUpdateOrderSagaStatusParams{ctx, order}
+	for _, e := range mmUpdateOrderSagaStatus.expectations {
+		if minimock.Equal(e.params, mmUpdateOrderSagaStatus.defaultExpectation.params) {
+			mmUpdateOrderSagaStatus.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmUpdateOrderSagaStatus.defaultExpectation.params)
+		}
+	}
+
+	return mmUpdateOrderSagaStatus
+}
+
+// Inspect accepts an inspector function that has same arguments as the DB.UpdateOrderSagaStatus
+func (mmUpdateOrderSagaStatus *mDBMockUpdateOrderSagaStatus) Inspect(f func(ctx context.Context, order *models.Order)) *mDBMockUpdateOrderSagaStatus {
+	if mmUpdateOrderSagaStatus.mock.inspectFuncUpdateOrderSagaStatus != nil {
+		mmUpdateOrderSagaStatus.mock.t.Fatalf("Inspect function is already set for DBMock.UpdateOrderSagaStatus")
+	}
+
+	mmUpdateOrderSagaStatus.mock.inspectFuncUpdateOrderSagaStatus = f
+
+	return mmUpdateOrderSagaStatus
+}
+
+// Return sets up results that will be returned by DB.UpdateOrderSagaStatus
+func (mmUpdateOrderSagaStatus *mDBMockUpdateOrderSagaStatus) Return(err error) *DBMock {
+	if mmUpdateOrderSagaStatus.mock.funcUpdateOrderSagaStatus != nil {
+		mmUpdateOrderSagaStatus.mock.t.Fatalf("DBMock.UpdateOrderSagaStatus mock is already set by Set")
+	}
+
+	if mmUpdateOrderSagaStatus.defaultExpectation == nil {
+		mmUpdateOrderSagaStatus.defaultExpectation = &DBMockUpdateOrderSagaStatusExpectation{mock: mmUpdateOrderSagaStatus.mock}
+	}
+	mmUpdateOrderSagaStatus.defaultExpectation.results = &DBMockUpdateOrderSagaStatusResults{err}
+	return mmUpdateOrderSagaStatus.mock
+}
+
+//Set uses given function f to mock the DB.UpdateOrderSagaStatus method
+func (mmUpdateOrderSagaStatus *mDBMockUpdateOrderSagaStatus) Set(f func(ctx context.Context, order *models.Order) (err error)) *DBMock {
+	if mmUpdateOrderSagaStatus.defaultExpectation != nil {
+		mmUpdateOrderSagaStatus.mock.t.Fatalf("Default expectation is already set for the DB.UpdateOrderSagaStatus method")
+	}
+
+	if len(mmUpdateOrderSagaStatus.expectations) > 0 {
+		mmUpdateOrderSagaStatus.mock.t.Fatalf("Some expectations are already set for the DB.UpdateOrderSagaStatus method")
+	}
+
+	mmUpdateOrderSagaStatus.mock.funcUpdateOrderSagaStatus = f
+	return mmUpdateOrderSagaStatus.mock
+}
+
+// When sets expectation for the DB.UpdateOrderSagaStatus which will trigger the result defined by the following
+// Then helper
+func (mmUpdateOrderSagaStatus *mDBMockUpdateOrderSagaStatus) When(ctx context.Context, order *models.Order) *DBMockUpdateOrderSagaStatusExpectation {
+	if mmUpdateOrderSagaStatus.mock.funcUpdateOrderSagaStatus != nil {
+		mmUpdateOrderSagaStatus.mock.t.Fatalf("DBMock.UpdateOrderSagaStatus mock is already set by Set")
+	}
+
+	expectation := &DBMockUpdateOrderSagaStatusExpectation{
+		mock:   mmUpdateOrderSagaStatus.mock,
+		params: &DBMockUpdateOrderSagaStatusParams{ctx, order},
+	}
+	mmUpdateOrderSagaStatus.expectations = append(mmUpdateOrderSagaStatus.expectations, expectation)
+	return expectation
+}
+
+// Then sets up DB.UpdateOrderSagaStatus return parameters for the expectation previously defined by the When method
+func (e *DBMockUpdateOrderSagaStatusExpectation) Then(err error) *DBMock {
+	e.results = &DBMockUpdateOrderSagaStatusResults{err}
+	return e.mock
+}
+
+// UpdateOrderSagaStatus implements DB
+func (mmUpdateOrderSagaStatus *DBMock) UpdateOrderSagaStatus(ctx context.Context, order *models.Order) (err error) {
+	mm_atomic.AddUint64(&mmUpdateOrderSagaStatus.beforeUpdateOrderSagaStatusCounter, 1)
+	defer mm_atomic.AddUint64(&mmUpdateOrderSagaStatus.afterUpdateOrderSagaStatusCounter, 1)
+
+	if mmUpdateOrderSagaStatus.inspectFuncUpdateOrderSagaStatus != nil {
+		mmUpdateOrderSagaStatus.inspectFuncUpdateOrderSagaStatus(ctx, order)
+	}
+
+	mm_params := &DBMockUpdateOrderSagaStatusParams{ctx, order}
+
+	// Record call args
+	mmUpdateOrderSagaStatus.UpdateOrderSagaStatusMock.mutex.Lock()
+	mmUpdateOrderSagaStatus.UpdateOrderSagaStatusMock.callArgs = append(mmUpdateOrderSagaStatus.UpdateOrderSagaStatusMock.callArgs, mm_params)
+	mmUpdateOrderSagaStatus.UpdateOrderSagaStatusMock.mutex.Unlock()
+
+	for _, e := range mmUpdateOrderSagaStatus.UpdateOrderSagaStatusMock.expectations {
+		if minimock.Equal(e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmUpdateOrderSagaStatus.UpdateOrderSagaStatusMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmUpdateOrderSagaStatus.UpdateOrderSagaStatusMock.defaultExpectation.Counter, 1)
+		mm_want := mmUpdateOrderSagaStatus.UpdateOrderSagaStatusMock.defaultExpectation.params
+		mm_got := DBMockUpdateOrderSagaStatusParams{ctx, order}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmUpdateOrderSagaStatus.t.Errorf("DBMock.UpdateOrderSagaStatus got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmUpdateOrderSagaStatus.UpdateOrderSagaStatusMock.defaultExpectation.results
+		if mm_results == nil {
+			mmUpdateOrderSagaStatus.t.Fatal("No results are set for the DBMock.UpdateOrderSagaStatus")
+		}
+		return (*mm_results).err
+	}
+	if mmUpdateOrderSagaStatus.funcUpdateOrderSagaStatus != nil {
+		return mmUpdateOrderSagaStatus.funcUpdateOrderSagaStatus(ctx, order)
+	}
+	mmUpdateOrderSagaStatus.t.Fatalf("Unexpected call to DBMock.UpdateOrderSagaStatus. %v %v", ctx, order)
+	return
+}
+
+// UpdateOrderSagaStatusAfterCounter returns a count of finished DBMock.UpdateOrderSagaStatus invocations
+func (mmUpdateOrderSagaStatus *DBMock) UpdateOrderSagaStatusAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmUpdateOrderSagaStatus.afterUpdateOrderSagaStatusCounter)
+}
+
+// UpdateOrderSagaStatusBeforeCounter returns a count of DBMock.UpdateOrderSagaStatus invocations
+func (mmUpdateOrderSagaStatus *DBMock) UpdateOrderSagaStatusBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmUpdateOrderSagaStatus.beforeUpdateOrderSagaStatusCounter)
+}
+
+// Calls returns a list of arguments used in each call to DBMock.UpdateOrderSagaStatus.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmUpdateOrderSagaStatus *mDBMockUpdateOrderSagaStatus) Calls() []*DBMockUpdateOrderSagaStatusParams {
+	mmUpdateOrderSagaStatus.mutex.RLock()
+
+	argCopy := make([]*DBMockUpdateOrderSagaStatusParams, len(mmUpdateOrderSagaStatus.callArgs))
+	copy(argCopy, mmUpdateOrderSagaStatus.callArgs)
+
+	mmUpdateOrderSagaStatus.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockUpdateOrderSagaStatusDone returns true if the count of the UpdateOrderSagaStatus invocations corresponds
+// the number of defined expectations
+func (m *DBMock) MinimockUpdateOrderSagaStatusDone() bool {
+	for _, e := range m.UpdateOrderSagaStatusMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.UpdateOrderSagaStatusMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterUpdateOrderSagaStatusCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcUpdateOrderSagaStatus != nil && mm_atomic.LoadUint64(&m.afterUpdateOrderSagaStatusCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockUpdateOrderSagaStatusInspect logs each unmet expectation
+func (m *DBMock) MinimockUpdateOrderSagaStatusInspect() {
+	for _, e := range m.UpdateOrderSagaStatusMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to DBMock.UpdateOrderSagaStatus with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.UpdateOrderSagaStatusMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterUpdateOrderSagaStatusCounter) < 1 {
+		if m.UpdateOrderSagaStatusMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to DBMock.UpdateOrderSagaStatus")
+		} else {
+			m.t.Errorf("Expected call to DBMock.UpdateOrderSagaStatus with params: %#v", *m.UpdateOrderSagaStatusMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcUpdateOrderSagaStatus != nil && mm_atomic.LoadUint64(&m.afterUpdateOrderSagaStatusCounter) < 1 {
+		m.t.Error("Expected call to DBMock.UpdateOrderSagaStatus")
+	}
+}
+
 type mDBMockUpdateStatus struct {
 	mock               *DBMock
 	defaultExpectation *DBMockUpdateStatusExpectation
@@ -710,9 +1613,17 @@ func (m *DBMock) MinimockUpdateStatusInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *DBMock) MinimockFinish() {
 	if !m.minimockDone() {
+		m.MinimockAddRetryInspect()
+
 		m.MinimockCheckStatusInspect()
 
 		m.MinimockCreateOrderInspect()
+
+		m.MinimockGetOrderInspect()
+
+		m.MinimockGetProcessingOrdersInspect()
+
+		m.MinimockUpdateOrderSagaStatusInspect()
 
 		m.MinimockUpdateStatusInspect()
 		m.t.FailNow()
@@ -738,7 +1649,11 @@ func (m *DBMock) MinimockWait(timeout mm_time.Duration) {
 func (m *DBMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockAddRetryDone() &&
 		m.MinimockCheckStatusDone() &&
 		m.MinimockCreateOrderDone() &&
+		m.MinimockGetOrderDone() &&
+		m.MinimockGetProcessingOrdersDone() &&
+		m.MinimockUpdateOrderSagaStatusDone() &&
 		m.MinimockUpdateStatusDone()
 }

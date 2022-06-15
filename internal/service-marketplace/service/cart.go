@@ -30,6 +30,10 @@ func (s *Service) UpdateCart(ctx context.Context, req *pb.UpdateCartRequest) (*p
 		Products: products,
 	}
 
+	if err := s.Cache.DeleteCart(ctx, types.ID(req.ID)); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update cart in cache, err: <%v>", err)
+	}
+
 	id, err := s.DB.UpdateCart(ctx, &newCart)
 	if err != nil {
 		if err == repo.ErrNotFound {

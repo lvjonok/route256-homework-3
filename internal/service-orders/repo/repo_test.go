@@ -22,6 +22,8 @@ func Prepare(t *testing.T) (*repo.Client, context.Context) {
 	require.NoError(t, err)
 	_, err = adp.Exec(ctx, "TRUNCATE TABLE order_items CASCADE;")
 	require.NoError(t, err)
+	_, err = adp.Exec(ctx, "TRUNCATE TABLE retries CASCADE;")
+	require.NoError(t, err)
 
 	client := repo.New(adp)
 	return client, ctx
